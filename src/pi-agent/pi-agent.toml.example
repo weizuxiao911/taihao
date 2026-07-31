@@ -1,0 +1,34 @@
+# 太昊 OS Pi Agent 配置示例
+# 部署路径：/etc/taihao-os/pi-agent.toml
+# 注意：skill_dirs 是顶层字段，必须位于任何 [表] 之前
+
+# SKILL 目录列表（系统级 + 厂商级）
+skill_dirs = [
+    "/usr/share/taihao-os/skills",
+    "/etc/taihao-os/skills",
+]
+
+[agent]
+# 决策周期（秒），必须 ≥1（≤1Hz 约束）
+tick_secs = 1
+# 状态输入文件（可选，缺省用内置默认状态）
+# state_file = "/var/lib/taihao-os/state.json"
+# 决策输出文件
+decision_file = "/var/lib/taihao-os/pi-agent/decision.json"
+# 决策模式白名单
+allowed_modes = [
+    "idle",
+    "survey",
+    "return",
+    "emergency_stop",
+    "emergency_surface",
+    "emergency_avoidance",
+]
+
+[provider]
+# OpenAI 兼容端点 base URL
+base_url = "http://127.0.0.1:8000/v1"
+model = "qwen2.5-7b"
+# API key 环境变量名（默认 OPENAI_API_KEY，key 本身不写入配置文件）
+api_key_env = "OPENAI_API_KEY"
+timeout_secs = 10

@@ -1,31 +1,37 @@
 # src/ — 太昊 OS 源码
 
-本目录将容纳太昊 OS 的运行时源码。当前为 skeleton 占位。
+太昊 OS 运行时源码目录。
 
-## 计划布局
+## 布局
 
 ```
 src/
-├── pi-agent/          # Pi Agent runtime（Agent Loop / Skill Registry / Extension / Hooks）
-├── hal-gateway/       # HAL 网关（白名单 + 审计 + capability 隔离）
-├── comm/              # 中台调度通信模块（MQTT / Mesh 适配）
-└── extension/         # Extension·MCP 桥
+├── pi-agent/          # Pi Agent runtime（Agent Loop / Skill Registry / Hooks / Provider）✓ M2 已实现
+├── hal-gateway/       # HAL 网关（白名单 + 审计 + capability 隔离）— 待实现
+├── comm/              # 中台调度通信模块（MQTT / Mesh 适配）— 待实现
+└── extension/         # Extension·MCP 桥 — 待实现
 ```
 
-## 选型待定
+## 选型（已定稿）
 
-后续会话需对齐：
+| 项 | 选择 | 状态 |
+| --- | --- | --- |
+| Pi Agent runtime 语言 | **Rust** | M2 已落地 |
+| HAL gateway 语言 | **Rust**（与 Pi Agent 一致） | 待实现 |
+| LLM 接入 | 远端 OpenAI 兼容端点（Provider 接口 + REST 客户端） | M2 已落地 |
+| MQTT 客户端库 | Mosquitto C client / Paho（选型时再定） | 待实现 |
+| SKILL frontmatter schema | name / version / security_level / description / author（见 `examples/skills/`） | 已定稿 |
 
-- **Pi Agent runtime 语言**：Rust / C / C++ / Go
-- **HAL gateway 语言**：同上
-- **MQTT 客户端库**：Mosquitto C client / Paho
-- **SKILL frontmatter schema**：当前示例（`examples/skills/emergency-avoidance.md`）占位，需定稿
+## Pi Agent（M2 已实现）
 
-## M1 阶段
+- 位置：`src/pi-agent/`
+- 组成：Agent Loop（≤1Hz 决策）、SKILL Registry（frontmatter 校验 + 防注入）、Hooks 预留、Provider（OpenAI 兼容 REST）
+- 配置：`pi-agent.toml.example` → 部署为 `/etc/taihao-os/pi-agent.toml`；API key 走环境变量（`OPENAI_API_KEY`），不写入配置
+- 决策输出：`/var/lib/taihao-os/pi-agent/decision.json`（JSON，mode 白名单校验）
+- 验证：`cargo test`（14 用例）；端到端 mock LLM 验证通过（SKILL 加载 → 决策 → 输出）
+- 安全：LLM 输出仅 mode/target，不直接控硬件；SKILL frontmatter 白名单字段校验
 
-本目录在 M1 阶段保持空目录；M2 起开始填代码。
-
-代码进入时遵循：
+## 代码进入遵循
 
 - 单一职责
 - 跨模块只通过约定接口
