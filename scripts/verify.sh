@@ -8,7 +8,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 OUTPUT_DIR="${ROOT_DIR}/output"
-IMAGE="${OUTPUT_DIR}/buildroot/images/rootfs.ext4"
+IMAGE_DIR="${OUTPUT_DIR}/buildroot/images"
+KERNEL_IMAGE="${IMAGE_DIR}/Image"
+ROOTFS_EXT4="${IMAGE_DIR}/rootfs.ext4"
 
 usage() {
     cat <<EOF
@@ -29,23 +31,24 @@ cmd_build() {
 }
 
 cmd_boot() {
-    if [[ ! -f "${IMAGE}" ]]; then
-        echo "镜像不存在: ${IMAGE}"
+    if [[ ! -f "${ROOTFS_EXT4}" ]]; then
+        echo "镜像不存在: ${ROOTFS_EXT4}"
         echo "先跑 '$0 build'"
         exit 1
     fi
     qemu-system-x86_64 \
         -M pc \
         -m 1G \
-        -kernel "${IMAGE}" \
-        -append "root=/dev/sda console=ttyS0" \
+        -kernel "${KERNEL_IMAGE}" \
+        -drive file="${ROOTFS_EXT4}",format=raw,if=virtio \
+        -append "root=/dev/vda rw console=ttyS0" \
         -nographic \
         -serial mon:stdio
 }
 
 cmd_boot_aa() {
-    if [[ ! -f "${IMAGE}" ]]; then
-        echo "镜像不存在: ${IMAGE}"
+    if [[ ! -f "${ROOTFS_EXT4}" ]]; then
+        echo "镜像不存在: ${ROOTFS_EXT4}"
         echo "先跑 '$0 build'"
         exit 1
     fi
@@ -53,8 +56,9 @@ cmd_boot_aa() {
         -M virt \
         -cpu cortex-a76 \
         -m 1G \
-        -kernel "${IMAGE}" \
-        -append "root=/dev/vda console=ttyAMA0" \
+        -kernel "${KERNEL_IMAGE}" \
+        -drive file="${ROOTFS_EXT4}",format=raw,if=virtio \
+        -append "root=/dev/vda rw console=ttyAMA0" \
         -nographic \
         -serial mon:stdio
 }
