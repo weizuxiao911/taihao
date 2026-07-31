@@ -110,7 +110,7 @@ OS 实现层两条核心安全准则：
 - **工具与 Provider 集**：Extension / MCP 桥接入自定义工具；`models.json` 注册任意 OpenAI 兼容端点
 - **HAL 集**：自定义驱动通过 HAL 网关注册；新增外设无需修改系统底座
 
-#### 拓扑
+#### 四层运行时结构
 
 ```mermaid
 flowchart LR
