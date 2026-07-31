@@ -47,6 +47,17 @@
 - 拼音规则：全小写、无分隔符
 - 许可证：Apache-2.0
 
+### 技术选型
+
+| 项 | 选择 | 理由 |
+| --- | --- | --- |
+| 目标硬件 | RK3588 同级别（Cortex-A76/A55 + NPU ≥ 6TOPS） | 16GB eMMC + 4GB RAM 约束；NPU 支持本地 7B 推理 |
+| 架构 | arm64（真机）+ amd64（开发 / QEMU 仿真） | 双架构 |
+| 内核 | Linux 6.6 LTS + PREEMPT_RT | 实时回路 10~100Hz；RT patch 维护良好 |
+| 基座 OS | Buildroot | 16GB eMMC 体积约束；RKNN / ONNX / llama.cpp / Mosquitto 可全编入；无 apt 依赖 |
+| 烧录 | dd（工厂）+ OTA（部署后） | A/B 双系统分区 + 失败回滚 |
+| 仿真 | QEMU amd64 + aarch64 | CI 强制；无需硬件可验证 |
+
 ### 三段式骨架
 
 | 术语 | 含义 |
@@ -84,16 +95,21 @@
 ```
 taihao/
 ├── README.md          # 项目门面（人）
-└── AGENTS.md          # 本文件（AI）
+├── AGENTS.md          # 本文件（AI）
+├── LICENSE            # Apache-2.0
+└── .gitignore
 ```
 
 未来新增目录 / 文件时的职责边界：
 
-- 太昊 OS 源码进 `src/` 或类似结构（Pi Agent runtime / HAL gateway / 接入位接口 / 中台调度通信模块）
+- 太昊 OS 源码进 `src/`（Pi Agent runtime / HAL gateway / 接入位接口 / 中台调度通信模块）
+- Buildroot 配置进 `packaging/buildroot/`（overlays / configs / package recipes）
+- 构建产物 `packaging/output/` 不入库（已在 .gitignore 排除 `*.img` / `*.iso`）
 - 运行时路径（仅作认知，未来实现时遵循）：
   - `/etc/taihao-os/` — 全局配置
   - `/usr/share/taihao-os/skills/` — 系统级 SKILL
   - `/etc/taihao-os/skills/` — 厂商级 SKILL
+  - `/var/lib/taihao-os/` — 运行时持久化数据
   - `/var/log/taihao-os/` — 审计日志
 
 ## 修改 / 提交 / PR 规范
@@ -141,13 +157,14 @@ taihao/
    - 不出现 `详见 / 参见 / 见 docs / 见设计文档 / 见 .poc` 等外指
    - Mermaid 图无 `style` / `classDef` / Emoji
    - 命名符合「命名 + 术语定义」
+   - 文档中明说目标硬件（RK3588 同级别）、基座（Buildroot）、烧录（dd + OTA）、仿真（QEMU）
 3. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
 
 ### 未来阶段（实现期）
 
 源码落地后，按模块拆 SOP：
 
-- **Linux Core**：内核裁剪配置、`/etc/taihao-os/` 编排、固件三分区镜像构建；验证 = systemd unit Ready + HAL 网关白名单测试
+- **Linux Core**：内核裁剪配置（6.6 LTS + PREEMPT_RT）、`/etc/taihao-os/` 编排、固件三分区镜像构建；验证 = systemd unit Ready + HAL 网关白名单测试
 - **Pi Agent**：Skill Registry / Extension 加载顺序；验证 = SKILL 签名校验 + Hooks 触发日志
 - **接入位四槽**：每槽独立验证
   - HAL：硬件 mock 驱动 + 网关审计日志
@@ -155,6 +172,7 @@ taihao/
   - Provider：OpenAI 兼容端点连通性 + 中台调度通信双链路切换
   - Extension·MCP：桥接调用往返 + 权限边界
 - **核心安全准则**：强制回归——LLM 不下场实时控制 + 不绕过 HAL 网关驱动硬件
+- **QEMU 仿真验证（强制）**：CI 中 QEMU 启动构建产物 → systemd Ready + Pi Agent 起来 + 接入位加载 → 全链路验证；amd64 + aarch64 均要跑通
 
 具体命令与验证脚本在新增模块时落地到本节。
 

@@ -138,10 +138,19 @@ flowchart LR
     CFG -.-> HW
 ```
 
-## 集成方式
+## 目标硬件
 
-- **宿主机 systemd 安装**（无强制 Docker 依赖）
-- **双架构**：amd64 + arm64
+- **主控**：RK3588 同级别（Cortex-A76/A55 八核 + NPU INT8 ≥ 6TOPS，可跑 7B 量化模型）
+- **存储**：16GB eMMC
+- **架构**：arm64（真机部署）+ amd64（开发 / QEMU 仿真）
+- **总线**：UART / I2C / SPI / PWM / CAN（HAL 集按统一接口规范对接）
+- **通信**：Wi-Fi 5/6 + AP + Mesh（802.11s 自组网）；外接水声通信机（HAL 集）；可选 4G/5G 模组
+
+## 构建 / 烧录 / 验证
+
+- **构建**：基座 Buildroot（用户态构建系统）+ Linux 6.6 LTS + PREEMPT_RT 内核；构建产物 = 智能 OS 镜像（amd64 / arm64）+ 签名 + SBOM + 溯源
+- **烧录**：dd to raw device（工厂产线）+ OTA（部署后远程升级，A/B 双系统分区 + 失败回滚）
+- **仿真**：QEMU amd64 + aarch64 必须可启动（CI 强制）
 - **许可证**：Apache-2.0
 
 ## 致谢
