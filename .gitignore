@@ -1,0 +1,70 @@
+# ===== 通用 =====
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ===== IDE =====
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+
+# ===== 凭据 / 敏感数据 =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+credentials/
+secrets/
+
+# ===== 依赖 / 构建产物 =====
+node_modules/
+dist/
+build/
+target/
+out/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.class
+*.jar
+
+# ===== 过程产物 =====
+.cache/
+.tmp/
+tmp/
+logs/
+*.log
+coverage/
+
+# ===== OS 镜像 / 虚拟化 =====
+*.img
+*.iso
+*.qcow2
+*.vmdk
+
+# ===== 包 / 压缩 =====
+*.deb
+*.rpm
+*.tar.gz
+*.zip
+
+# ===== 测试 =====
+.pytest_cache/
+.tox/
+.coverage
+htmlcov/
+
+# ===== 内核构建 =====
+*.ko
+*.mod
+*.cmd
+.tmp_versions/
+modules.order
+Module.symvers
