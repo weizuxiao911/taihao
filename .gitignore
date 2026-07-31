@@ -21,7 +21,8 @@ Thumbs.db
 credentials/
 secrets/
 
-# ===== 依赖 / 构建产物 =====
+# ===== 构建产物 =====
+output/
 node_modules/
 dist/
 build/
