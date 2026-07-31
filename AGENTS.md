@@ -146,6 +146,17 @@ taihao/
 - 已推送的 commit 历史不重写
 - 未推送且用户明示"重写历史"时方可（如本仓库初始化阶段）
 
+## 模拟器 / 仿真工具栈
+
+| 工具 | 角色 | 必要性 | 安装 |
+| --- | --- | --- | --- |
+| **QEMU** | boot 镜像验证（aarch64 + x86_64） | 必装 | `brew install qemu` / `apt install qemu-system-arm qemu-system-x86` |
+| **UTM** | Linux VM host（macOS 上跑 Buildroot 构建） | 必装 | `brew install --cask utm` |
+| **Lima** | headless Linux VM 替代 UTM | 可选 | `brew install lima` |
+| **Apple Silicon native** | ARM64 Linux 直接跑 | 极简开发 | 不需装；Buildroot 仍是 Linux-only |
+
+工作流：Buildroot 在 UTM/Lima 下的 Linux VM 跑；QEMU 启动构建产物验证；真机部署走 dd / OTA。
+
 ## 调试 / 排查 / 验证 SOP
 
 ### 当前阶段（早期骨架，零代码）

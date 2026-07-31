@@ -157,3 +157,20 @@ flowchart LR
 
 - [Linux 内核](https://www.kernel.org/) 及生态（namespaces / seccomp / AppArmor / iptables / eBPF）—— 四层隔离栈与能力裁减基础
 - **Linux + Pi Agent** 设计形态 —— 太昊三段式骨架（Linux Core + Pi Agent + 开放接入位）的源头思路
+
+## 模拟器 / 仿真工具
+
+太昊 OS 在 macOS / Linux 上开发时推荐的模拟器栈：
+
+| 模拟器 | 角色 | 必要性 | 安装 |
+| --- | --- | --- | --- |
+| **QEMU** | boot 太昊 OS 镜像验证（aarch64 + x86_64） | 必装 | `brew install qemu`（macOS）；`apt install qemu-system-arm qemu-system-x86`（Linux） |
+| **UTM** | Linux VM host（macOS 上跑 Buildroot 构建） | 必装 | `brew install --cask utm`（macOS） |
+| **Lima** | headless Linux VM，UTM 的轻量替代 | 可选 | `brew install lima`（macOS） |
+| **Apple Silicon native** | ARM64 Linux 直接跑（无需模拟） | 极简开发 | 不需装；Buildroot 仍是 Linux-only |
+
+### 工作流
+
+- **Buildroot 构建**：在 UTM（或 Lima）里的 Linux VM 跑
+- **镜像验证**：QEMU 启动构建产物（aarch64 / x86_64）
+- **真机部署**：RK3588 通过 dd / OTA 烧录
