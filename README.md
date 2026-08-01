@@ -153,6 +153,12 @@ flowchart LR
 - **仿真**：QEMU amd64 + aarch64 必须可启动（CI 强制）
 - **许可证**：Apache-2.0
 
+## 运行效果
+
+QEMU 中启动太昊 OS 镜像（aarch64）：
+
+![太昊 OS 在 QEMU 中启动](./assets/image.png)
+
 ## 致谢
 
 - [Linux 内核](https://www.kernel.org/) 及生态（namespaces / seccomp / AppArmor / iptables / eBPF）—— 四层隔离栈与能力裁减基础
