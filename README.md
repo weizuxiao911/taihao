@@ -6,7 +6,7 @@
 [![Status: 早期骨架](https://img.shields.io/badge/Status-%E6%9E%81%E6%97%A9%E9%AA%A8%E6%9E%B6-lightgrey.svg)](#)
 [![Arch: amd64 + arm64](https://img.shields.io/badge/Arch-amd64%20%2B%20arm64-blueviolet.svg)](#)
 
-## 一句话定位
+## 这是什么
 
 太昊 OS = **Linux Core + Pi Agent + 开放接入位**。
 
