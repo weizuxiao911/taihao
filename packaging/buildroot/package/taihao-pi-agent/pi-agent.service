@@ -1,0 +1,20 @@
+[Unit]
+Description=Taihao OS Pi Agent - 唯一智能决策层
+After=systemd-networkd.service
+Wants=systemd-networkd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pi-agent --config /etc/taihao-os/pi-agent.toml
+Restart=on-failure
+RestartSec=5
+# 受限 namespace + 无 capabilities（与设计一致）
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/taihao-os
+PrivateTmp=true
+# API key 从环境注入，不写进配置
+EnvironmentFile=-/etc/taihao-os/pi-agent.env
+
+[Install]
+WantedBy=multi-user.target

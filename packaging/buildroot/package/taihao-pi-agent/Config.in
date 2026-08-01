@@ -1,0 +1,9 @@
+config BR2_PACKAGE_TAIHAO_PI_AGENT
+	bool "taihao-pi-agent"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  太昊 OS Pi Agent — 唯一智能决策层（Agent Loop / SKILL Registry / Provider）。
+
+	  决策输出 /var/lib/taihao-os/pi-agent/decision.json；
+	  配置 /etc/taihao-os/pi-agent.toml。

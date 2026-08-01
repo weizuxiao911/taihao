@@ -8,6 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 BUILDROOT_DEFCONFIG="${ROOT_DIR}/packaging/buildroot/configs/taihao_defconfig"
+BUILDROOT_EXTERNAL="${ROOT_DIR}/packaging/buildroot"
 BUILDROOT_DIR="${BUILDROOT_DIR:-${HOME}/buildroot}"
 OUTPUT_DIR="${ROOT_DIR}/output"
 
@@ -49,8 +50,10 @@ cmd_build() {
     fi
     mkdir -p "${OUTPUT_DIR}"
     cd "${BUILDROOT_DIR}"
-    make O="${OUTPUT_DIR}/buildroot" BR2_DEFCONFIG="${BUILDROOT_DEFCONFIG}" defconfig
-    make O="${OUTPUT_DIR}/buildroot" -j"${JOBS:-$(nproc)}"
+    make O="${OUTPUT_DIR}/buildroot" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        BR2_DEFCONFIG="${BUILDROOT_DEFCONFIG}" defconfig
+    make O="${OUTPUT_DIR}/buildroot" BR2_EXTERNAL="${BUILDROOT_EXTERNAL}" \
+        -j"${JOBS:-$(nproc)}"
     echo "构建产物: ${OUTPUT_DIR}/buildroot/images/"
 }
 
