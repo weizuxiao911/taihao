@@ -159,24 +159,29 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（早期骨架，零代码）
+### 当前阶段（M2：Pi Agent 已落地）
 
-仓库当前无源码、无测试、无 CI、无构建产物。SOP 主要是状态核验：
+仓库状态：`src/pi-agent/`（Rust）已实现并集成进 Buildroot 镜像；无 CI；其余模块（HAL 网关 / comm / extension）未开始。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
-2. **文档一致性**：任何修改完成后 grep 核验
+2. **Pi Agent 验证**：
+   - 单元测试：`cd src/pi-agent && cargo test`（14 用例）
+   - 端到端：mock OpenAI 兼容端点 + `pi-agent --once`（SKILL 加载 → LLM 决策 → 输出）
+   - 镜像内验证：QEMU 启动 → `systemctl is-active pi-agent` = active
+3. **镜像构建**：`./packaging/build.sh build`（BR2_EXTERNAL 已接入自研包）
+4. **文档一致性**：任何修改完成后 grep 核验
    - 不出现 `详见 / 参见 / 见 docs / 见设计文档 / 见 .poc` 等外指
    - Mermaid 图无 `style` / `classDef` / Emoji
    - 命名符合「命名 + 术语定义」
    - 文档中明说目标硬件（RK3588 同级别）、基座（Buildroot）、烧录（dd + OTA）、仿真（QEMU）
-3. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
+5. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
 
 ### 未来阶段（实现期）
 
 源码落地后，按模块拆 SOP：
 
 - **Linux Core**：内核裁剪配置（6.6 LTS + PREEMPT_RT）、`/etc/taihao-os/` 编排、固件三分区镜像构建；验证 = systemd unit Ready + HAL 网关白名单测试
-- **Pi Agent**：Skill Registry / Extension 加载顺序；验证 = SKILL 签名校验 + Hooks 触发日志
+- **Pi Agent**：已落地（Agent Loop / SKILL Registry / Provider / systemd 自启）；剩余：SKILL 签名校验、Hooks 触发、Extension 加载
 - **接入位四槽**：每槽独立验证
   - HAL：硬件 mock 驱动 + 网关审计日志
   - SKILL：SKILL.md frontmatter 校验 + 安全分级断言
@@ -203,3 +208,4 @@ taihao/
 | 日期 | 变更 | 影响范围 |
 | --- | --- | --- |
 | 仓库初始化（终态） | 太昊定位为「智能终端 / 机器人设备端 OS」；README + AGENTS 一次性大重写到终态（移除「起点 / 终点」废话与「太昊 = 构建系统」误读）；重写 git 历史为单 commit | 仓库根 |
+| 2026-08-01 | Pi Agent M2 落地（Rust）：Agent Loop / SKILL Registry / Provider（OpenAI 兼容远端端点）；BR2_EXTERNAL 接入自研 cargo 包 + systemd unit 开机自启 + SKILL overlay；QEMU 验证通过；SOP 当前阶段更新为「M2」 | src/pi-agent、packaging/buildroot |
