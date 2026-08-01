@@ -159,11 +159,6 @@ QEMU 中启动太昊 OS 镜像（aarch64）：
 
 ![太昊 OS 在 QEMU 中启动](./assets/image.png)
 
-## 致谢
-
-- [Linux 内核](https://www.kernel.org/) 及生态（namespaces / seccomp / AppArmor / iptables / eBPF）—— 四层隔离栈与能力裁减基础
-- **Linux + Pi Agent** 设计形态 —— 太昊三段式骨架（Linux Core + Pi Agent + 开放接入位）的源头思路
-
 ## 模拟器 / 仿真工具
 
 太昊 OS 在 macOS / Linux 上开发时推荐的模拟器栈；推荐用 QEMU 测试或体验 OS：
@@ -180,3 +175,8 @@ QEMU 中启动太昊 OS 镜像（aarch64）：
 - **Buildroot 构建**：在 UTM（或 Lima）里的 Linux VM 跑
 - **测试 / 体验 OS**：QEMU 启动构建产物（aarch64 / x86_64）
 - **真机部署**：RK3588 通过 dd / OTA 烧录
+
+## 致谢
+
+- [Linux 内核](https://www.kernel.org/) 及生态（namespaces / seccomp / AppArmor / iptables / eBPF）—— 四层隔离栈与能力裁减基础
+- **Linux + Pi Agent** 设计形态 —— 太昊三段式骨架（Linux Core + Pi Agent + 开放接入位）的源头思路
