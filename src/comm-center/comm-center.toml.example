@@ -1,0 +1,31 @@
+# 太昊 OS 中台调度通信模块配置示例
+# 部署路径：/etc/taihao-os/comm-center.toml
+# 对接对象（岸基 / 云 / 邻域）由厂商配置决定，OS 出厂不预设
+
+# 远程链路协议：sse_http / websocket / mqtt
+remote_proto = "sse_http"
+# 远程端点（SSE 订阅 + HTTP 上报 base，或 WS URL，或 MQTT broker）
+remote_endpoint = "http://127.0.0.1:9000"
+# 消息主题前缀
+topic_prefix = "taihao/"
+# 本地 Mesh 端口（UDP）
+mesh_port = 41800
+# 健康检查周期（秒）
+health_check_secs = 5
+# 故障切换阈值：连续失败 N 次切换
+fail_threshold = 3
+# 状态上报文件（调试 / 验证）
+status_file = "/var/lib/taihao-os/comm-center/status.json"
+
+# 路由表：topic（前缀匹配）→ 动作（builtin:report 或 script:<命令>）
+[[routes]]
+topic = "task"
+action = "builtin:report"
+
+[[routes]]
+topic = "command"
+action = "builtin:report"
+
+[[routes]]
+topic = "ota"
+action = "script:/usr/bin/taihao-ota"

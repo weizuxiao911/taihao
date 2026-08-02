@@ -1,0 +1,22 @@
+[package]
+name = "comm-center"
+version = "0.1.0"
+edition = "2021"
+description = "太昊 OS 中台调度通信模块 — 双链路选择 + 消息路由 + 故障切换 (接入位实现)"
+license = "Apache-2.0"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+clap = { version = "4", features = ["derive"] }
+log = "0.4"
+env_logger = "0.11"
+ureq = { version = "2", features = ["json"] }
+rumqttc = "0.24"
+tungstenite = "0.21"
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
