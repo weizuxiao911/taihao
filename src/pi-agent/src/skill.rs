@@ -1,13 +1,20 @@
 //! SKILL Registry — 加载 / 校验 / 注册 SKILL.md 包
 //!
 //! 扫描目录（系统级 + 厂商级），解析 frontmatter，校验通过后注册。
+//! 安全增强：
+//! - 签名校验：配置签名密钥时，SKILL 必须携带对正文的 HMAC-SHA256 签名，失败跳过；
+//! - frontmatter 白名单：只允许已知标量字段，防注入。
 //! 校验失败仅告警跳过，不中断 Agent Loop。
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use hmac::{Hmac, Mac};
 use serde::Deserialize;
 use serde_yaml::Value;
+use sha2::Sha256;
+
+type HmacSha256 = Hmac<Sha256>;
 
 /// 安全分级：L1 最高权限（紧急保护），数值越小越关键
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Deserialize)]
@@ -28,6 +35,9 @@ pub struct SkillMeta {
     #[serde(default)]
     #[allow(dead_code)]
     pub author: String,
+    /// 正文签名（HMAC-SHA256 hex）；签名密钥启用时必填且必须通过校验
+    #[serde(default)]
+    pub signature: Option<String>,
 }
 
 /// 已注册 SKILL：元信息 + 正文（决策流程 / 触发条件等）
@@ -50,7 +60,8 @@ pub struct Registry {
 
 impl Registry {
     /// 从目录列表扫描并注册 SKILL（目录不存在时忽略）
-    pub fn load(dirs: &[PathBuf]) -> Registry {
+    /// `signing_key`：签名密钥（None = 不启用签名校验）
+    pub fn load(dirs: &[PathBuf], signing_key: Option<&str>) -> Registry {
         let mut skills = Vec::new();
         let mut skipped = Vec::new();
 
@@ -70,9 +81,15 @@ impl Registry {
                 if path.extension().map_or(true, |e| e != "md") {
                     continue;
                 }
-                match parse_skill_file(&path) {
+                match parse_skill_file(&path, signing_key) {
                     Ok(skill) => {
-                        log::info!("SKILL 注册: {} v{} ({})", skill.meta.name, skill.meta.version, skill.meta.security_level.as_str());
+                        log::info!(
+                            "SKILL 注册: {} v{} ({}){}",
+                            skill.meta.name,
+                            skill.meta.version,
+                            skill.meta.security_level.as_str(),
+                            if signing_key.is_some() { " 签名通过" } else { "" }
+                        );
                         skills.push(skill);
                     }
                     Err(err) => {
@@ -108,7 +125,7 @@ impl SecurityLevel {
 }
 
 /// 解析单个 SKILL.md：frontmatter 必须合法，正文为 frontmatter 之后的部分
-fn parse_skill_file(path: &Path) -> Result<Skill, String> {
+fn parse_skill_file(path: &Path, signing_key: Option<&str>) -> Result<Skill, String> {
     let content = fs::read_to_string(path).map_err(|e| format!("读取失败: {}", e))?;
     let (frontmatter, body) = split_frontmatter(&content)?;
     // 防注入：frontmatter 只允许已知标量字段
@@ -118,11 +135,34 @@ fn parse_skill_file(path: &Path) -> Result<Skill, String> {
 
     validate(&meta)?;
 
+    // 签名校验：密钥启用时强制
+    if let Some(key) = signing_key {
+        let sig = meta
+            .signature
+            .as_ref()
+            .ok_or("签名密钥已启用，但 SKILL 缺少 signature 字段")?;
+        let expected = sign_body(key, &body).map_err(|e| format!("签名计算失败: {}", e))?;
+        if !expected.eq_ignore_ascii_case(sig) {
+            return Err("签名校验失败（正文与签名不匹配或密钥不符）".to_string());
+        }
+    }
+
     Ok(Skill {
         meta,
         body: body.trim().to_string(),
         path: path.to_path_buf(),
     })
+}
+
+/// 对正文计算 HMAC-SHA256 签名（hex 小写）
+pub fn sign_body(key: &str, body: &str) -> Result<String, String> {
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).map_err(|e| e.to_string())?;
+    mac.update(body.trim().as_bytes());
+    Ok(hex_encode(&mac.finalize().into_bytes()))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 
 /// 拆出 frontmatter（--- 定界）与正文
@@ -171,6 +211,7 @@ pub fn skills_to_json(registry: &Registry) -> String {
                 "security_level": s.meta.security_level.as_str(),
                 "description": s.meta.description,
                 "author": s.meta.author,
+                "signed": s.meta.signature.is_some(),
                 "path": s.path.display().to_string(),
             })
         })
@@ -202,7 +243,7 @@ pub fn assert_frontmatter_safe(frontmatter: &str) -> Result<(), String> {
     let map = v.as_mapping().ok_or("frontmatter 必须是映射")?;
     for (key, val) in map {
         let k = key.as_str().unwrap_or("");
-        if !matches!(k, "name" | "version" | "security_level" | "description" | "author") {
+        if !matches!(k, "name" | "version" | "security_level" | "description" | "author" | "signature") {
             return Err(format!("frontmatter 含未知字段: {}", k));
         }
         if !matches!(val, Value::String(_)) {
@@ -215,6 +256,10 @@ pub fn assert_frontmatter_safe(frontmatter: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn sample_body() -> String {
+        "# 正文\n\n## 决策流程\n\n安全第一".to_string()
+    }
 
     #[test]
     fn parse_valid_skill() {
@@ -241,6 +286,7 @@ mod tests {
             security_level: SecurityLevel::L2,
             description: "x".into(),
             author: String::new(),
+            signature: None,
         };
         assert!(validate(&meta).is_err());
     }
@@ -249,5 +295,64 @@ mod tests {
     fn reject_unknown_field() {
         let fm = "name: a\nversion: 0.1.0\nsecurity_level: L1\ndescription: x\ninjected: true";
         assert!(assert_frontmatter_safe(fm).is_err());
+    }
+
+    #[test]
+    fn sign_then_verify_ok() {
+        let key = "test-key";
+        let body = sample_body();
+        let sig = sign_body(key, &body).unwrap();
+        let content = format!(
+            "---\nname: x\nversion: 0.1.0\nsecurity_level: L2\ndescription: d\nauthor: t\nsignature: {}\n---\n\n{}",
+            sig, body
+        );
+        let dir = std::env::temp_dir().join(format!("skill-sig-{}", std::process::id()));
+        fs::create_dir_all(&dir).ok();
+        let path = dir.join("signed.md");
+        fs::write(&path, content).unwrap();
+
+        let registry = Registry::load(&[dir.clone()], Some(key));
+        assert_eq!(registry.len(), 1);
+        assert!(registry.skipped.is_empty());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn tampered_body_fails_signature() {
+        let key = "test-key";
+        let sig = sign_body(key, &sample_body()).unwrap();
+        let content = format!(
+            "---\nname: x\nversion: 0.1.0\nsecurity_level: L2\ndescription: d\nauthor: t\nsignature: {}\n---\n\n# 被篡改的正文",
+            sig
+        );
+        let dir = std::env::temp_dir().join(format!("skill-tamper-{}", std::process::id()));
+        fs::create_dir_all(&dir).ok();
+        let path = dir.join("tampered.md");
+        fs::write(&path, content).unwrap();
+
+        let registry = Registry::load(&[dir.clone()], Some(key));
+        assert_eq!(registry.len(), 0);
+        assert_eq!(registry.skipped.len(), 1);
+        assert!(registry.skipped[0].1.contains("签名校验失败"));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn missing_signature_rejected_when_key_enabled() {
+        let dir = std::env::temp_dir().join(format!("skill-nosig-{}", std::process::id()));
+        fs::create_dir_all(&dir).ok();
+        let path = dir.join("nosig.md");
+        fs::write(
+            &path,
+            "---\nname: x\nversion: 0.1.0\nsecurity_level: L2\ndescription: d\nauthor: t\n---\n\nbody",
+        )
+        .unwrap();
+        let registry = Registry::load(&[dir.clone()], Some("key"));
+        assert_eq!(registry.len(), 0);
+        assert!(registry.skipped[0].1.contains("缺少 signature"));
+        // 无密钥时正常加载
+        let registry2 = Registry::load(&[dir.clone()], None);
+        assert_eq!(registry2.len(), 1);
+        fs::remove_dir_all(&dir).ok();
     }
 }

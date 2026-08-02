@@ -19,6 +19,24 @@ pub struct Config {
     /// SKILL 目录列表
     #[serde(default)]
     pub skill_dirs: Vec<String>,
+    /// SKILL 签名密钥的环境变量名（未设置则不启用签名校验）
+    #[serde(default)]
+    pub signing_key_env: Option<String>,
+    /// Hooks：决策前后执行的外部命令
+    #[serde(default)]
+    pub hooks: Vec<HookToml>,
+    /// Extension 目录列表（加载 extension.toml 工具清单）
+    #[serde(default)]
+    pub extension_dirs: Vec<String>,
+}
+
+/// Hook 定义
+#[derive(Debug, Clone, Deserialize)]
+pub struct HookToml {
+    /// 触发时机：before（决策前）/ after（决策后）
+    pub when: String,
+    /// 执行命令（sh -c）
+    pub command: String,
 }
 
 /// agent 段（与 AgentConfig 对应）
@@ -108,13 +126,36 @@ impl Config {
         }
     }
 
+    /// 签名密钥（从环境变量读取，未设置返回 None = 不启用签名校验）
+    pub fn signing_key(&self) -> Option<String> {
+        let env = self.signing_key_env.clone().unwrap_or_else(|| "TAIHAO_SKILL_SIGNING_KEY".to_string());
+        std::env::var(&env).ok().filter(|k| !k.is_empty())
+    }
+
     /// 转成运行结构
     pub fn to_runtime(&self) -> (AgentConfig, ProviderConfig, Vec<PathBuf>) {
+        let (hooks_before, hooks_after): (Vec<String>, Vec<String>) = self
+            .hooks
+            .iter()
+            .filter(|h| h.when == "before" || h.when == "after")
+            .fold((Vec::new(), Vec::new()), |(mut b, mut a), h| {
+                if h.when == "before" {
+                    b.push(h.command.clone());
+                } else {
+                    a.push(h.command.clone());
+                }
+                (b, a)
+            });
+
         let agent = AgentConfig {
             tick_secs: self.agent.tick_secs,
             state_file: self.agent.state_file.clone().map(PathBuf::from),
             decision_file: PathBuf::from(&self.agent.decision_file),
             allowed_modes: self.agent.allowed_modes.clone(),
+            hooks_before,
+            hooks_after,
+            // Extension 工具由 main 在加载后注入
+            extension_tools: vec![],
         };
         let provider = ProviderConfig {
             base_url: self.provider.base_url.clone(),
@@ -144,6 +185,9 @@ impl Default for Config {
             agent: AgentToml::default(),
             provider: ProviderToml::default(),
             skill_dirs: vec![],
+            signing_key_env: None,
+            hooks: vec![],
+            extension_dirs: vec![],
         }
     }
 }
@@ -184,5 +228,36 @@ model = "qwen2.5-7b"
         assert_eq!(cfg.skill_dirs, vec!["/tmp/skills"]);
         let (_, _, dirs) = cfg.to_runtime();
         assert_eq!(dirs, vec![std::path::PathBuf::from("/tmp/skills")]);
+    }
+
+    #[test]
+    fn hooks_split_before_after() {
+        let toml = r#"
+[[hooks]]
+when = "before"
+command = "echo pre"
+
+[[hooks]]
+when = "after"
+command = "echo post"
+
+[[hooks]]
+when = "unknown"
+command = "echo skip"
+"#;
+        let cfg: Config = toml::from_str(toml).unwrap();
+        let (agent, _, _) = cfg.to_runtime();
+        assert_eq!(agent.hooks_before, vec!["echo pre"]);
+        assert_eq!(agent.hooks_after, vec!["echo post"]);
+    }
+
+    #[test]
+    fn signing_key_env_default() {
+        let cfg = Config::default();
+        std::env::remove_var("TAIHAO_SKILL_SIGNING_KEY");
+        assert!(cfg.signing_key().is_none());
+        std::env::set_var("TAIHAO_SKILL_SIGNING_KEY", "secret");
+        assert_eq!(cfg.signing_key().as_deref(), Some("secret"));
+        std::env::remove_var("TAIHAO_SKILL_SIGNING_KEY");
     }
 }

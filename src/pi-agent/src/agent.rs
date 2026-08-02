@@ -22,6 +22,12 @@ pub struct AgentConfig {
     pub decision_file: PathBuf,
     /// 决策模式白名单：LLM 输出必须落在此集合内
     pub allowed_modes: Vec<String>,
+    /// 决策前 Hooks（sh -c 命令，失败仅告警）
+    pub hooks_before: Vec<String>,
+    /// 决策后 Hooks（sh -c 命令，失败仅告警）
+    pub hooks_after: Vec<String>,
+    /// 已加载扩展的工具名（进决策上下文，实际调用走 Extension·MCP 桥）
+    pub extension_tools: Vec<String>,
 }
 
 impl Default for AgentConfig {
@@ -38,6 +44,9 @@ impl Default for AgentConfig {
                 "emergency_surface".into(),
                 "emergency_avoidance".into(),
             ],
+            hooks_before: vec![],
+            hooks_after: vec![],
+            extension_tools: vec![],
         }
     }
 }
@@ -98,6 +107,17 @@ fn tick(
     provider: &ProviderConfig,
     agent_cfg: &AgentConfig,
 ) -> TickResult {
+    run_hooks(&agent_cfg.hooks_before, "before");
+    let result = tick_inner(registry, provider, agent_cfg);
+    run_hooks(&agent_cfg.hooks_after, "after");
+    result
+}
+
+fn tick_inner(
+    registry: &Registry,
+    provider: &ProviderConfig,
+    agent_cfg: &AgentConfig,
+) -> TickResult {
     let state = read_state(agent_cfg);
     let system = build_system_prompt(registry, agent_cfg);
     let user = format!("当前设备状态:\n{}\n\n请输出决策（JSON）：mode 从 {} 中选择，target 为目标参数，rationale 为一句中文理由。", 
@@ -115,6 +135,17 @@ fn tick(
     }
 }
 
+/// 执行 Hooks（sh -c）；失败仅告警，不中断决策
+fn run_hooks(hooks: &[String], when: &str) {
+    for cmd in hooks {
+        match std::process::Command::new("sh").arg("-c").arg(cmd).output() {
+            Ok(out) if out.status.success() => log::debug!("Hook[{}] 成功: {}", when, cmd),
+            Ok(out) => log::warn!("Hook[{}] 失败 (status={}): {}", when, out.status, cmd),
+            Err(e) => log::warn!("Hook[{}] 执行错误: {} err={}", when, cmd, e),
+        }
+    }
+}
+
 /// 读取状态文件；缺失或解析失败时返回内置默认状态（不中断循环）
 fn read_state(agent_cfg: &AgentConfig) -> String {
     let path = match &agent_cfg.state_file {
@@ -127,18 +158,27 @@ fn read_state(agent_cfg: &AgentConfig) -> String {
     }
 }
 
-/// 组装 system prompt：SKILL 上下文 + 决策约束
+/// 组装 system prompt：SKILL 上下文 + 扩展工具 + 决策约束
 fn build_system_prompt(registry: &Registry, agent_cfg: &AgentConfig) -> String {
+    let ext_ctx = if agent_cfg.extension_tools.is_empty() {
+        String::new()
+    } else {
+        format!(
+            "可用扩展工具（经 Extension·MCP 桥调用，需在桥白名单内）: {}\n",
+            agent_cfg.extension_tools.join(" / ")
+        )
+    };
     format!(
         "你是设备端智能决策层 Pi Agent。\n\
          只能从可用 SKILL 中选用能力，不得凭空创造动作。\n\
-         {} \
+         {} {} \
          安全准则：\n\
          - 你只输出目标与模式，不直接控制任何硬件\n\
          - 紧急情况优先选择 emergency_stop / emergency_surface / emergency_avoidance\n\
          - mode 只允许以下白名单: {}\n\
          - 输出必须是合法 JSON，字段: mode, target, rationale",
         skills_to_context(registry),
+        ext_ctx,
         agent_cfg.allowed_modes.join(" / ")
     )
 }
@@ -209,7 +249,33 @@ mod tests {
             state_file: None,
             decision_file: Path::new("/tmp/pi-agent-test/decision.json").to_path_buf(),
             allowed_modes: vec!["idle".into(), "emergency_stop".into()],
+            hooks_before: vec![],
+            hooks_after: vec![],
+            extension_tools: vec![],
         }
+    }
+
+    #[test]
+    fn hooks_run_and_fail_soft() {
+        // before 成功、after 命令不存在（失败仅告警，不 panic）
+        let mut cfg = test_cfg();
+        cfg.hooks_before = vec!["echo hook-pre".into()];
+        cfg.hooks_after = vec!["/nonexistent-cmd-xyz".into()];
+        run_hooks(&cfg.hooks_before, "before");
+        run_hooks(&cfg.hooks_after, "after");
+    }
+
+    #[test]
+    fn prompt_includes_extension_tools() {
+        let mut cfg = test_cfg();
+        cfg.extension_tools = vec!["device_status".into()];
+        let registry = Registry {
+            skills: vec![],
+            skipped: vec![],
+        };
+        let prompt = build_system_prompt(&registry, &cfg);
+        assert!(prompt.contains("device_status"));
+        assert!(prompt.contains("Extension·MCP 桥"));
     }
 
     #[test]

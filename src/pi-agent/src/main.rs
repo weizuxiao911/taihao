@@ -1,10 +1,11 @@
 //! 太昊 OS Pi Agent — 唯一智能决策层入口
 //!
-//! 职责：加载 SKILL → Agent Loop → LLM 决策 → 下发目标/模式。
-//! 安全：本进程设计为受限 namespace、无 capabilities；不直接控制硬件。
+//! 职责：加载 SKILL（签名校验）→ Extension 加载 → Agent Loop → LLM 决策 → 下发目标/模式。
+//! 安全：本进程设计为受限 namespace、无 capabilities；不直接控制硬件（硬件走 HAL 网关）。
 
 mod agent;
 mod config;
+mod extension;
 mod provider;
 mod skill;
 
@@ -39,9 +40,16 @@ fn main() {
     for w in &warnings {
         log::warn!("{}", w);
     }
-    let (agent_cfg, provider_cfg, skill_dirs) = cfg.to_runtime();
+    let (mut agent_cfg, provider_cfg, skill_dirs) = cfg.to_runtime();
 
-    let registry = skill::Registry::load(&skill_dirs);
+    // SKILL 签名密钥（环境变量注入，不入库）；未设置则不启用签名校验
+    let signing_key = cfg.signing_key();
+    if signing_key.is_some() {
+        log::info!("SKILL 签名校验已启用");
+    } else {
+        log::warn!("SKILL 签名校验未启用（未设置签名密钥环境变量）");
+    }
+    let registry = skill::Registry::load(&skill_dirs, signing_key.as_deref());
     log::info!(
         "SKILL Registry: {} 个已注册, {} 个跳过",
         registry.len(),
@@ -50,6 +58,15 @@ fn main() {
     for (path, reason) in &registry.skipped {
         log::warn!("跳过 {}: {}", path.display(), reason);
     }
+
+    // Extension 加载（工具清单进决策上下文；实际调用走 Extension·MCP 桥）
+    let extension_set = extension::ExtensionSet::load(&cfg.extension_dirs.iter().map(PathBuf::from).collect::<Vec<_>>());
+    agent_cfg.extension_tools = extension_set.tool_names();
+    log::info!(
+        "Extension: {} 个已加载, {} 个工具可用",
+        extension_set.extensions.len(),
+        agent_cfg.extension_tools.len()
+    );
 
     if registry.len() == 0 {
         log::warn!("无可用 SKILL，Agent Loop 将以空技能集运行");

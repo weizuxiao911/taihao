@@ -11,8 +11,16 @@ RestartSec=5
 # 受限 namespace + 无 capabilities（与设计一致）
 NoNewPrivileges=true
 ProtectSystem=strict
+ProtectHome=true
 ReadWritePaths=/var/lib/taihao-os
 PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+RestrictAddressFamilies=AF_UNIX AF_INET
+RestrictSUIDSGID=true
+LockPersonality=true
 # API key 从环境注入，不写进配置
 EnvironmentFile=-/etc/taihao-os/pi-agent.env
 
