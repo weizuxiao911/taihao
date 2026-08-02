@@ -3,7 +3,7 @@
 > 智能终端 / 机器人设备端 OS；以 Linux Core 为底座、Pi Agent 为唯一智能决策层、开放接入位承载垂直差异。
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![Status: 早期骨架](https://img.shields.io/badge/Status-%E6%9E%81%E6%97%A9%E9%AA%A8%E6%9E%B6-lightgrey.svg)](#)
+[![Status: 开发中](https://img.shields.io/badge/Status-M3_%E5%BC%80%E5%8F%91%E4%B8%AD-lightgrey.svg)](#)
 [![Arch: amd64 + arm64](https://img.shields.io/badge/Arch-amd64%20%2B%20arm64-blueviolet.svg)](#)
 
 ## 这是什么
@@ -148,8 +148,9 @@ flowchart LR
 
 ## 构建 / 烧录 / 验证
 
+- **本地模块验证**：`./scripts/verify.sh smoke`（五模块 cargo test + SKILL frontmatter 断言 + mock 端到端，无需 QEMU）
 - **构建**：基座 Buildroot（用户态构建系统）+ Linux 6.6 LTS + PREEMPT_RT 内核；构建产物 = 智能 OS 镜像（amd64 / arm64）+ 签名 + SBOM + 溯源
-- **烧录**：dd to raw device（工厂产线）+ OTA（部署后远程升级，A/B 双系统分区 + 失败回滚）
+- **烧录**：dd to raw device（工厂产线）+ OTA（部署后远程升级，A/B 双系统分区 + 失败回滚；脚本骨架见 `packaging/partitions/`）
 - **仿真**：QEMU amd64 + aarch64 必须可启动（CI 强制）
 - **许可证**：Apache-2.0
 

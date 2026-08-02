@@ -159,38 +159,37 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（M2：Pi Agent 已落地）
+### 当前阶段（M3：全模块落地）
 
-仓库状态：`src/pi-agent/`（Rust）已实现并集成进 Buildroot 镜像；无 CI；其余模块（HAL 网关 / comm / extension）未开始。SOP：
+仓库状态：五模块全部实现并接入 Buildroot（pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）；无 CI。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
-2. **Pi Agent 验证**：
-   - 单元测试：`cd src/pi-agent && cargo test`（14 用例）
+2. **本地模块验证（smoke）**：`./scripts/verify.sh smoke`
+   - cargo test 全仓（5 模块，75 用例：pi-agent 24 / hal-gateway 12 / rt-loop 12 / comm-center 15 / extension-bridge 12）
+   - SKILL frontmatter 断言（examples/skills 与 overlay 一致，6 个，安全分级 L1~L3）
+   - mock 端到端（hal-gateway 白名单直调 / extension-bridge tools/list）
+3. **Pi Agent 验证**：
+   - 单元测试：`cd src/pi-agent && cargo test`（24 用例）
    - 端到端：mock OpenAI 兼容端点 + `pi-agent --once`（SKILL 加载 → LLM 决策 → 输出）
    - 镜像内验证：QEMU 启动 → `systemctl is-active pi-agent` = active
-3. **镜像构建**：`./packaging/build.sh build`（BR2_EXTERNAL 已接入自研包）
-4. **文档一致性**：任何修改完成后 grep 核验
+4. **镜像构建**：`./packaging/build.sh build`（BR2_EXTERNAL 已接入 5 个自研包）
+5. **文档一致性**：任何修改完成后 grep 核验
    - 不出现 `详见 / 参见 / 见 docs / 见设计文档 / 见 .poc` 等外指
    - Mermaid 图无 `style` / `classDef` / Emoji
    - 命名符合「命名 + 术语定义」
    - 文档中明说目标硬件（RK3588 同级别）、基座（Buildroot）、烧录（dd + OTA）、仿真（QEMU）
-5. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
+6. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
 
-### 未来阶段（实现期）
+### 模块验证明细（M3 落地）
 
-源码落地后，按模块拆 SOP：
-
-- **Linux Core**：内核裁剪配置（6.6 LTS + PREEMPT_RT）、`/etc/taihao-os/` 编排、固件三分区镜像构建；验证 = systemd unit Ready + HAL 网关白名单测试
-- **Pi Agent**：已落地（Agent Loop / SKILL Registry / Provider / systemd 自启）；剩余：SKILL 签名校验、Hooks 触发、Extension 加载
-- **接入位四槽**：每槽独立验证
-  - HAL：硬件 mock 驱动 + 网关审计日志
-  - SKILL：SKILL.md frontmatter 校验 + 安全分级断言
-  - Provider：OpenAI 兼容端点连通性 + 中台调度通信双链路切换
-  - Extension·MCP：桥接调用往返 + 权限边界
-- **核心安全准则**：强制回归——LLM 不下场实时控制 + 不绕过 HAL 网关驱动硬件
-- **QEMU 仿真验证（强制）**：CI 中 QEMU 启动构建产物 → systemd Ready + Pi Agent 起来 + 接入位加载 → 全链路验证；amd64 + aarch64 均要跑通
-
-具体命令与验证脚本在新增模块时落地到本节。
+- **hal-gateway**（Linux Core）：白名单校验（工具 + 参数）、审计日志追加、mock 驱动、文件协议服务（serve / call）
+- **rt-loop**（Linux Core）：10~100Hz 周期、模式→执行器映射、紧急模式立即生效、决策缺失降级 idle
+- **comm-center**（接入位·中台调度通信）：远程链路（SSE/WS/MQTT）+ 本地 Mesh（UDP）、双链路故障切换（阈值 3 次）、消息路由（builtin:report / script:<cmd>）
+- **extension-bridge**（接入位·Extension·MCP）：JSON-RPC 2.0（initialize / tools/list / tools/call）、工具白名单 + 参数白名单 + shell 转义
+- **pi-agent 剩余**：SKILL 签名校验（HMAC-SHA256，密钥走环境变量）、Hooks（before/after）、Extension 工具加载
+- **构建集成**：5 个 Buildroot 包 + systemd 沙箱（NoNewPrivileges / CapabilityBoundingSet / PrivateDevices / RestrictAddressFamilies）、四层隔离栈模板（/etc/taihao-os/security/）、固件三分区 + A/B OTA 脚本骨架
+- **核心安全准则回归**：LLM 不下场实时控制（rt-loop 独立 10~100Hz）+ 不绕过 HAL 网关（白名单 + 审计）——代码级测试覆盖
+- **QEMU 全链路验证（强制）**：镜像内 systemd Ready + 5 服务 active + 接入位加载；amd64 + aarch64 均要跑通（镜像重建耗时，默认由用户触发）
 
 ## 一致性核验
 
@@ -209,3 +208,4 @@ taihao/
 | --- | --- | --- |
 | 仓库初始化（终态） | 太昊定位为「智能终端 / 机器人设备端 OS」；README + AGENTS 一次性大重写到终态（移除「起点 / 终点」废话与「太昊 = 构建系统」误读）；重写 git 历史为单 commit | 仓库根 |
 | 2026-08-01 | Pi Agent M2 落地（Rust）：Agent Loop / SKILL Registry / Provider（OpenAI 兼容远端端点）；BR2_EXTERNAL 接入自研 cargo 包 + systemd unit 开机自启 + SKILL overlay；QEMU 验证通过；SOP 当前阶段更新为「M2」 | src/pi-agent、packaging/buildroot |
+| 2026-08-03 | M3 全模块落地：① hal-gateway（白名单+审计+mock 驱动）② rt-loop（10~100Hz 实时回路）③ SKILL 集补齐 6 个（紧急避险/故障自愈/多机避障/分区协同/路径规划/感知融合）④ comm-center（SSE/WS/MQTT + Mesh UDP 双链路 + 故障切换 + 路由）⑤ extension-bridge（JSON-RPC + 白名单 + 权限边界）⑥ pi-agent 补 SKILL 签名校验/Hooks/Extension 加载 ⑦ Buildroot 5 包 + systemd 四层隔离栈沙箱 + 固件三分区/A-B OTA 脚本骨架 + verify.sh smoke；SOP 更新为「M3」 | src/*、packaging/buildroot、examples/skills、scripts |
