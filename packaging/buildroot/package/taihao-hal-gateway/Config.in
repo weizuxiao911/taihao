@@ -1,0 +1,11 @@
+config BR2_PACKAGE_TAIHAO_HAL_GATEWAY
+	bool "taihao-hal-gateway"
+	depends on BR2_PACKAGE_HOST_RUSTC_TARGET_ARCH_SUPPORTS
+	select BR2_PACKAGE_HOST_RUSTC
+	help
+	  太昊 OS HAL 网关 — 硬件调用的唯一入口（白名单校验 + 审计日志）。
+
+	  请求目录 /var/lib/taihao-os/hal-gateway/requests；
+	  审计日志 /var/log/taihao-os/hal-audit.log；
+	  配置 /etc/taihao-os/hal-gateway.toml。
+	  持有 CAP_SYS_RAWIO / CAP_NET_ADMIN（四层隔离栈中唯一硬件访问权）。

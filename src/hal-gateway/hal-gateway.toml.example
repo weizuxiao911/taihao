@@ -1,0 +1,35 @@
+# 太昊 OS HAL 网关配置示例
+# 部署路径：/etc/taihao-os/hal-gateway.toml
+
+# 审计日志路径（追加写，不可覆盖）
+audit_log = "/var/log/taihao-os/hal-audit.log"
+# 服务模式：请求 / 响应目录（JSON 文件协议，SKILL 与厂商扩展经此调用）
+request_dir = "/var/lib/taihao-os/hal-gateway/requests"
+response_dir = "/var/lib/taihao-os/hal-gateway/responses"
+# 轮询间隔（毫秒）
+poll_ms = 200
+
+# 工具白名单（硬边界：未注册工具一律拒绝；参数名同样受白名单约束）
+[[tools]]
+name = "thruster_set"
+driver = "mock"                # mock 为默认；真机驱动: spidev/i2c/pwm/serial/can/v4l2
+args = ["power", "channel"]    # 允许注入的参数名
+level = "L2"                   # L1 紧急保护 / L2 常规控制 / L3 查询
+
+[[tools]]
+name = "thruster_emergency_stop"
+driver = "mock"
+args = []
+level = "L1"
+
+[[tools]]
+name = "buoyancy_set"
+driver = "mock"
+args = ["volume"]
+level = "L1"
+
+[[tools]]
+name = "sensor_read"
+driver = "mock"
+args = ["sensor"]
+level = "L3"

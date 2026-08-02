@@ -1,0 +1,27 @@
+[Unit]
+Description=Taihao OS HAL Gateway - 硬件调用的唯一入口
+After=systemd-networkd.service
+Wants=systemd-networkd.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hal-gateway --config /etc/taihao-os/hal-gateway.toml serve
+Restart=on-failure
+RestartSec=5
+# 唯一持有硬件访问权的进程：CAP_SYS_RAWIO / CAP_NET_ADMIN
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/taihao-os /var/log/taihao-os
+# 需要访问 /dev 设备节点（真机驱动槽位），不隔离 PrivateDevices
+CapabilityBoundingSet=CAP_SYS_RAWIO CAP_NET_ADMIN
+AmbientCapabilities=CAP_SYS_RAWIO CAP_NET_ADMIN
+RestrictAddressFamilies=AF_UNIX AF_INET AF_NETLINK
+ProtectKernelTunables=true
+ProtectKernelModules=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
