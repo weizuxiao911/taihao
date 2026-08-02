@@ -1,0 +1,25 @@
+[Unit]
+Description=Taihao OS Extension Bridge - Extension·MCP 桥
+After=pi-agent.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/extension-bridge --config /etc/taihao-os/extension-bridge.toml serve
+Restart=on-failure
+RestartSec=5
+# 受限沙箱：无 capabilities，无网络（工具经命令执行，不对外连接）
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+ProtectKernelTunables=true
+ProtectKernelModules=true
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+ReadWritePaths=/var/lib/taihao-os /etc/taihao-os
+
+[Install]
+WantedBy=multi-user.target
