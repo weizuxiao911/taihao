@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>太昊 OS · 工作机制</title>
+<style>
+  :root {
+    --blue: #2E6FB7; --blue-bg: #E4EEFA; --blue-fg: #F4F8FE;
+    --green: #3E8E5A; --green-bg: #E4F2E9; --green-fg: #F3FAF4;
+    --orange: #D99A4E; --orange-bg: #FDEEE0; --orange-fg: #FFF7EE;
+    --red: #C2574A; --red-bg: #F9E7E4; --red-fg: #FFF8F7;
+    --purple: #7A5FA8; --purple-bg: #F0EAF9; --purple-fg: #FAF5FE;
+    --yellow: #B8952C; --yellow-bg: #FBF3D9; --yellow-fg: #FFFDF2;
+    --gray: #8A8A8A; --gray-bg: #EDEDED; --gray-fg: #F7F7F7;
+    --ink: #333;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif; background: #e8eaed; color: var(--ink); height: 100vh; overflow: hidden; margin: 0; font-weight: 600; }
+
+  nav.tabs {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+    display: flex; gap: 8px; justify-content: center; padding: 8px 10px;
+    background: #fff; border-bottom: 1px solid #ddd; height: 48px; box-sizing: border-box;
+  }
+  nav.tabs button {
+    padding: 6px 20px; border: 1px solid #bbb; border-radius: 6px;
+    background: #fff; cursor: pointer; font-size: 14px;
+  }
+  nav.tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: bold; }
+
+  /* 屏幕: 保持 B5 横向宽比 (980:690) 整体缩放为一屏, 在导航栏下方区域居中 */
+  .page {
+    display: none; position: absolute; left: 50%; top: calc(50% + 24px);
+    width: 980px; height: 690px; background: #fff; padding: 10px;
+    transform: translate(-50%, -50%) scale(var(--s, 1));
+    transform-origin: center; box-shadow: 0 4px 24px rgba(0,0,0,.15);
+  }
+  .page.active { display: block; }
+
+  /* 打印: B5 横向纸型 (250x176mm @96dpi = 944.88x665.19px), 内容垂直水平居中 */
+  @media print {
+    @page { size: 250mm 176mm; margin: 0; }
+    body { height: auto; overflow: visible; background: #fff; }
+    nav.tabs { display: none; }
+    .page {
+      position: static; left: auto; top: auto; box-shadow: none;
+      width: 944.88px; height: 665.19px; transform: none;
+      display: flex !important; flex-direction: column;
+      align-items: center; justify-content: center;
+      page-break-after: always;
+    }
+    .page > * { width: 100%; flex-shrink: 0; }
+    .page:last-child { page-break-after: auto; }
+  }
+
+  h1 { font-size: 17px; text-align: center; margin: 4px 0 2px; }
+  .subtitle { font-size: 9px; text-align: center; color: #888; margin-bottom: 6px; }
+
+  .lane {
+    border: 2px solid; border-radius: 8px; padding: 6px;
+    display: flex; flex-direction: column; gap: 5px;
+  }
+  .lane-title { font-size: 11px; font-weight: bold; padding-bottom: 2px; border-bottom: 1px dashed #ccc; margin-bottom: 2px; }
+  .card {
+    border: 1px solid; border-radius: 6px; background: #fff;
+    padding: 5px 7px; font-size: 9.5px; line-height: 1.4;
+  }
+  .card b { display: block; font-size: 10px; }
+  .arrow-col { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px; width: 40px; flex-shrink: 0; }
+  .arrow-col .lbl { font-size: 8px; color: var(--ink); background: #fff; border: 1px dashed #bbb; border-radius: 4px; padding: 2px 3px; text-align: center; }
+  .arrow { font-size: 16px; color: #555; }
+
+  .main-row { display: flex; gap: 0; margin-top: 4px; }
+  .lane-blue   { border-color: var(--blue);   background: var(--blue-bg);   }
+  .lane-green  { border-color: var(--green);  background: var(--green-bg);  }
+  .lane-orange { border-color: var(--orange); background: var(--orange-bg); }
+  .lane-red    { border-color: var(--red);    background: var(--red-bg);    }
+  .lane-purple { border-color: var(--purple); background: var(--purple-bg); }
+  .lane-yellow { border-color: var(--yellow); background: var(--yellow-bg); }
+  .lane-gray   { border-color: var(--gray);   background: var(--gray-bg);   }
+
+  .c-blue   { border-color: var(--blue);   }
+  .c-green  { border-color: var(--green);  }
+  .c-orange { border-color: var(--orange); }
+  .c-red    { border-color: var(--red);    }
+  .c-purple { border-color: var(--purple); }
+  .c-yellow { border-color: var(--yellow); }
+  .c-gray   { border-color: var(--gray);   }
+
+  .bottom-row { display: flex; gap: 6px; margin-top: 6px; }
+  .steps { display: flex; align-items: center; gap: 2px; flex: 1; }
+  .step {
+    flex: 1; border: 1px solid var(--green); border-radius: 6px; background: #fff;
+    text-align: center; padding: 4px 2px; font-size: 8.5px; line-height: 1.3;
+  }
+  .step .n { font-weight: bold; }
+  .step-arrow { color: #888; font-size: 12px; flex-shrink: 0; }
+
+  .flow { display: flex; flex-direction: column; gap: 4px; }
+  .flow-step {
+    border: 1px solid var(--green); border-radius: 6px; background: #fff;
+    padding: 5px 8px; font-size: 9.5px;
+  }
+  .branch { display: flex; gap: 6px; }
+  .branch .flow-step { flex: 1; }
+
+  .lanes-2col { display: flex; gap: 8px; margin-top: 6px; }
+  .lanes-2col .lane { flex: 1; }
+
+  .note { font-size: 8.5px; color: #666; margin-top: 4px; }
+  .footer { font-size: 9px; text-align: center; color: #666; font-style: italic; margin-top: 6px; }
+
+  table.cfg { width: 100%; border-collapse: collapse; font-size: 9px; }
+  table.cfg th { background: #DDEBF7; border: 1px solid #9E9E9E; padding: 3px 6px; text-align: left; }
+  table.cfg td { border: 1px solid #9E9E9E; padding: 3px 6px; }
+  table.cfg tr.hl td { background: #FBF3D9; }
+
+  .rule-cards { display: flex; gap: 8px; }
+  .rule { border: 1px solid; border-radius: 8px; background: #fff; padding: 8px; font-size: 9px; line-height: 1.5; flex: 1; }
+  .rule h3 { font-size: 11px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<nav class="tabs">
+  <button class="active" data-page="p1">1 总体架构</button>
+  <button data-page="p2">2 运行机制</button>
+  <button data-page="p3">3 安全与数据</button>
+  <button data-page="p4">4 接入位与速查</button>
+</nav>
+
+<!-- ==================== 页面 1: 总体架构 ==================== -->
+<div class="page active" id="p1">
+  <h1>太昊 OS · 总体架构与三段式骨架</h1>
+  <div class="subtitle">页面 1/4 · B5 横向 · 数据来源: README.md (太昊 OS 唯一事实源) · 2026-08</div>
+
+  <div class="main-row">
+    <div class="lane lane-gray" style="width:128px">
+      <div class="lane-title">外部世界</div>
+      <div class="card c-gray"><b>对接对象</b>岸基 / 云 / 邻域机器人 / 调试终端</div>
+      <div class="card c-gray"><b>建立时机</b>上浮水面或进入通信覆盖区</div>
+    </div>
+
+    <div class="arrow-col">
+      <div class="lbl">任务下发<br>结果回传</div>
+      <div class="arrow">↔</div>
+    </div>
+
+    <div class="lane lane-purple" style="width:170px">
+      <div class="lane-title">中台调度通信模块 (接入位实现)</div>
+      <div class="card c-purple"><b>调度</b>任务编排 / 消息路由 / 双链路选择 / 故障切换</div>
+      <div class="card c-purple"><b>通信</b>MQTT / Modbus / 自研二进制 / WebSocket / SSE</div>
+      <div class="card c-purple"><b>位置</b>位于 Pi Agent 与外部之间, 不出现在 OS Core</div>
+    </div>
+
+    <div class="arrow-col">
+      <div class="lbl">目标/模式<br>≤1Hz</div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="lane lane-blue" style="width:172px">
+      <div class="lane-title">Pi Agent (唯一智能决策层)</div>
+      <div class="card c-blue"><b>Agent Loop</b>Skill Registry / Extension / Hooks</div>
+      <div class="card c-blue"><b>权限受限</b>受限 namespace, 无 capabilities</div>
+      <div class="card c-blue"><b>输出</b>仅以 ≤1Hz 下发目标与模式, 不直接驱动硬件</div>
+    </div>
+
+    <div class="arrow-col">
+      <div class="lbl">SKILL 调用<br>白名单校验</div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="lane lane-green" style="width:236px">
+      <div class="lane-title">Linux Core (OS 底座)</div>
+      <div class="card c-green"><b>HAL 网关</b>白名单校验 + 审计日志落盘; 持有 CAP_SYS_RAWIO / CAP_NET_ADMIN</div>
+      <div class="card c-green"><b>四层隔离栈</b>iptables / namespaces / seccomp+eBPF / AppArmor</div>
+      <div class="card c-green"><b>高频实时回路</b>C / Rust 10~100Hz (推进器 / 姿态 / 避障)</div>
+    </div>
+
+    <div class="arrow-col">
+      <div class="lbl">硬件驱动</div>
+      <div class="arrow">→</div>
+    </div>
+
+    <div class="lane lane-red" style="width:126px">
+      <div class="lane-title">硬件接入层</div>
+      <div class="card c-red">UART / I2C / SPI / PWM / CAN</div>
+      <div class="card c-red">Wi-Fi 5/6 + AP + Mesh (802.11s)</div>
+      <div class="card c-red">水声通信机 (HAL 集)</div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="lane lane-orange" style="flex:1">
+      <div class="lane-title">开放接入位四槽 (垂直差异承载位, 厂商可写)</div>
+      <div class="steps">
+        <div class="step"><div class="n">HAL 集</div>spidev / i2c-dev / V4L2 / SocketCAN / pwmchip / serial</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">SKILL 集</div>紧急避险 / 故障自愈 / 多机避障 / 分区协同 / 路径规划 / 感知融合</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">Provider 集</div>OpenAI 兼容端点 + 自定义协议 + 中台调度通信模块</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">Extension·MCP 桥</div>扩展与 MCP 桥接, 接入自研边缘能力</div>
+      </div>
+      <div class="note">四槽通过 SKILL / Provider / HAL 三个入口接入 Pi Agent 与 Linux Core; 新外设 / 新能力无需修改系统底座</div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="lane lane-yellow" style="flex:1">
+      <div class="lane-title">双链路 (相互独立并行, 远程中断不影响本地协同)</div>
+      <div class="steps">
+        <div class="step"><div class="n">远程通信</div>4G/5G、Wi-Fi (主要) + 卫星回传 (冗余)</div><span class="step-arrow"></span>
+        <div class="step"><div class="n">本地 Mesh 集群</div>Wi-Fi Mesh 802.11s 自组网 (主要) + 水声通信 (深水冗余)</div><span class="step-arrow"></span>
+        <div class="step"><div class="n">固件三分区</div>只读系统 (升级覆盖) / 全局配置 (升级保留) / 业务开发 (厂商可读写)</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">页面 1/4 · 三段式骨架解耦: OS Core 与 Pi Agent 不为具体终端形态定制, 垂直差异全部走接入位</div>
+</div>
+
+<!-- ==================== 页面 2: 运行机制 ==================== -->
+<div class="page" id="p2">
+  <h1>太昊 OS · 运行机制: 决策-控制分离 与 任务执行闭环</h1>
+  <div class="subtitle">页面 2/4 · B5 横向 · 核心准则: LLM 不直接下场做实时控制</div>
+
+  <div class="lanes-2col">
+    <div class="lane lane-blue">
+      <div class="lane-title">双回路: 慢决策 × 快控制 (频率分离)</div>
+      <div class="card c-blue"><b>慢回路 · 决策 (LLM)</b>
+        LLM 接入层 → Pi Agent 决策 (Agent Loop / SKILL 推理)<br>
+        · 输出: 目标与模式, 频率 ≤1Hz<br>
+        · 延迟: 200ms ~ 3s, 不足以承担 10ms 周期 PWM 控制
+      </div>
+      <div class="card c-blue"><b>快回路 · 控制 (实时)</b>
+        高频实时回路 C / Rust, 10~100Hz<br>
+        · 推进器 / 姿态 / 避障回路由 Linux Core 内进程直接承担<br>
+        · 10ms 级周期, 不经过 LLM
+      </div>
+      <div class="card c-gray"><b>分界</b>Pi Agent 只下发目标与模式 (≤1Hz); 100Hz 控制回路全程 C/Rust, 决策与控制物理隔离</div>
+    </div>
+
+    <div class="lane lane-green">
+      <div class="lane-title">任务执行闭环 (端到端)</div>
+      <div class="flow">
+        <div class="flow-step">① 网联对接: 上电激活 → 中台调度通信模块建立远程连接 → 接收任务</div>
+        <div class="flow-step">② 自主组网: 按配置完成 Mesh 域组网, 与同区域设备 AP 自组网</div>
+        <div class="flow-step">③ 任务执行: 路径规划 → 运动控制 → 感知融合 → 执行反馈</div>
+        <div class="flow-step">④ 边缘自治: 作业中自主执行四类本地决策 (见下)</div>
+        <div class="flow-step">⑤ 结果回传: 经中台调度通信模块上报执行结果</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="lane lane-orange" style="flex:1">
+      <div class="lane-title">边缘自治 · 四类本地决策 (不依赖远端)</div>
+      <div class="steps">
+        <div class="step"><div class="n">紧急避险</div>碰撞 / 缠绕 / 低电 / 传感器异常 → 停机、悬停、脱离作业区、上浮</div><span class="step-arrow">|</span>
+        <div class="step"><div class="n">故障自愈</div>本地恢复或降级运行 (重连链路 / 切换通道 / 关故障模块); 失败则上报维护</div><span class="step-arrow">|</span>
+        <div class="step"><div class="n">多机避障</div>本地 Mesh 感知邻域位置与意图, 路径规划自动避让</div><span class="step-arrow">|</span>
+        <div class="step"><div class="n">分区协同</div>按邻域拓扑与能力动态划分子区域, 多台并行覆盖互不重叠</div>
+      </div>
+    </div>
+  </div>
+  <div class="footer">页面 2/4 · 智能集群工作模式: 自主组网 + 边缘自治 + 分区协同, 远程中断不影响本地作业</div>
+</div>
+
+<!-- ==================== 页面 3: 安全与数据 ==================== -->
+<div class="page" id="p3">
+  <h1>太昊 OS · 安全准则 · 隔离栈 · 双链路 · 固件三分区</h1>
+  <div class="subtitle">页面 3/4 · B5 横向 · 两条核心安全准则约束 LLM 与硬件的边界</div>
+
+  <div class="lane lane-red">
+    <div class="lane-title">两条核心安全准则</div>
+    <div class="rule-cards">
+      <div class="rule c-red"><h3>① LLM 不直接下场做实时控制</h3>
+        100Hz 推进器 / 姿态 / 避障回路由 Linux Core 内 C/Rust 高频进程承担;<br>
+        Pi Agent 仅以 ≤1Hz 下发目标与模式;<br>
+        LLM 回路延迟 200ms~3s, 不足以承担 10ms 周期的 PWM 控制。
+      </div>
+      <div class="rule c-red"><h3>② LLM 不绕过 HAL 网关直接驱动硬件</h3>
+        CORE → HW 必须经 Pi Agent SKILL 调用触发;<br>
+        所有 SKILL 调用必经 HAL 网关白名单校验 + 审计日志落盘;<br>
+        Pi Agent 跑在受限 namespace、无 capabilities;<br>
+        HAL 网关持有 CAP_SYS_RAWIO / CAP_NET_ADMIN。
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-row">
+    <div class="lane lane-blue" style="flex:1">
+      <div class="lane-title">四层隔离栈 (Linux Core)</div>
+      <div class="steps">
+        <div class="step"><div class="n">iptables</div>网络层访问控制</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">namespaces</div>进程/资源视图隔离</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">seccomp + eBPF</div>系统调用与内核钩子过滤</div><span class="step-arrow">→</span>
+        <div class="step"><div class="n">AppArmor</div>强制访问控制 (MAC)</div>
+      </div>
+    </div>
+    <div class="lane lane-yellow" style="width:340px">
+      <div class="lane-title">双链路冗余</div>
+      <div class="card c-yellow"><b>远程通信</b>4G/5G、Wi-Fi 主要通道; 卫星回传可选冗余; 上浮或进入覆盖区建立</div>
+      <div class="card c-yellow"><b>本地 Mesh 集群</b>802.11s 自组网主要通道; 水声通信深水切换冗余; 上电持续激活</div>
+    </div>
+  </div>
+
+  <div class="lane lane-green" style="margin-top:6px">
+    <div class="lane-title">固件三分区 (升级行为与数据安全)</div>
+    <table class="cfg">
+      <tr><th style="width:140px">分区</th><th style="width:110px">写权限</th><th>内容</th><th style="width:90px">升级行为</th></tr>
+      <tr><td>只读系统分区</td><td>项目维护</td><td>裁剪 Linux 内核、Pi Agent runtime、推理库、通信协议栈、调度内核、进程保活、HAL 网关</td><td>升级覆盖</td></tr>
+      <tr><td>全局配置分区</td><td>可读写</td><td>LLM provider、SKILL 白名单、HAL 工具白名单、安全分级、告警阈值、上报频率、组网参数、中台配置</td><td>升级保留</td></tr>
+      <tr class="hl"><td>业务开发分区</td><td>厂商可读写</td><td>外设驱动、机构控制逻辑、定制 SKILL 包 / Extension / Hooks / Prompt Template</td><td>升级保留</td></tr>
+    </table>
+    <div class="note">OTA 升级采用 A/B 双系统分区 + 失败回滚; 业务与配置分区升级后保留, 厂商资产不因系统升级丢失</div>
+  </div>
+  <div class="footer">页面 3/4 · 安全边界: LLM 决策层无权限, 硬件控制权集中于 HAL 网关, 审计日志全程可追溯</div>
+</div>
+
+<!-- ==================== 页面 4: 接入位与速查 ==================== -->
+<div class="page" id="p4">
+  <h1>太昊 OS · 开放接入位 · 硬件 · 构建烧录速查</h1>
+  <div class="subtitle">页面 4/4 · B5 横向 · 垂直差异全部走接入位, OS 底座不随终端形态定制</div>
+
+  <div class="lane lane-purple">
+    <div class="lane-title">开放接入位四槽 (厂商可写业务分区)</div>
+    <table class="cfg">
+      <tr><th style="width:130px">槽位</th><th>内容</th><th style="width:200px">接入点 / 示例</th></tr>
+      <tr><td>HAL 集</td><td>硬件驱动接入点, 统一接口规范对接</td><td>spidev / i2c-dev / V4L2 / SocketCAN / pwmchip / serial / 水声通信机</td></tr>
+      <tr><td>SKILL 集</td><td>策略 / 任务 / 自治能力 SKILL.md 包 (系统级 + 厂商级, 签名/版本/安全分级)</td><td>紧急避险 / 故障自愈 / 多机避障 / 分区协同 / 路径规划 / 感知融合</td></tr>
+      <tr><td>Provider 集</td><td>模型 / 工具 / 中台调度通信模块注册</td><td>任意 OpenAI 兼容端点 (models.json) + 自定义协议</td></tr>
+      <tr class="hl"><td>Extension·MCP 桥</td><td>扩展与 MCP 桥接, 接入自研边缘能力</td><td>Extension / MCP 协议</td></tr>
+    </table>
+    <div class="note">配置驱动: /etc/taihao-os/ YAML/JSON 编排四层; systemd EnvironmentFile 与内核 cmdline 运行时覆盖</div>
+  </div>
+
+  <div class="lanes-2col" style="margin-top:6px">
+    <div class="lane lane-gray">
+      <div class="lane-title">目标硬件</div>
+      <div class="card c-gray">主控: RK3588 同级别 (Cortex-A76/A55 八核 + NPU INT8 ≥ 6TOPS, 可跑 7B 量化模型)</div>
+      <div class="card c-gray">存储: 16GB eMMC; 架构: arm64 (真机) + amd64 (开发 / QEMU)</div>
+      <div class="card c-gray">总线: UART / I2C / SPI / PWM / CAN; 通信: Wi-Fi 5/6 + AP + Mesh, 可选 4G/5G 模组</div>
+    </div>
+    <div class="lane lane-green">
+      <div class="lane-title">构建 / 烧录 / 验证</div>
+      <div class="flow">
+        <div class="flow-step">① 构建: Buildroot (用户态) + Linux 6.6 LTS + PREEMPT_RT → 镜像 (amd64/arm64) + 签名 + SBOM + 溯源</div>
+        <div class="flow-step">② 烧录: dd to raw device (工厂产线); OTA (A/B 双系统分区 + 失败回滚)</div>
+        <div class="flow-step">③ 验证: QEMU amd64 + aarch64 可启动 (CI 强制); 真机 RK3588 部署</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="lane lane-gray" style="margin-top:6px">
+    <div class="lane-title">仓库结构 (taihao)</div>
+    <div class="steps">
+      <div class="step"><div class="n">src/pi-agent</div>Rust 实现, 唯一智能决策层</div><span class="step-arrow">|</span>
+      <div class="step"><div class="n">examples/skills</div>SKILL 示例 (如 emergency-avoidance)</div><span class="step-arrow">|</span>
+      <div class="step"><div class="n">packaging/buildroot</div>Buildroot external tree (configs/board/package)</div><span class="step-arrow">|</span>
+      <div class="step"><div class="n">scripts / output</div>构建脚本与产物目录</div><span class="step-arrow">|</span>
+      <div class="step"><div class="n">assets</div>镜像 / 文档素材</div>
+    </div>
+  </div>
+  <div class="footer">页面 4/4 · 详细设计见 README.md (唯一事实源); 许可证 Apache-2.0</div>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('nav.tabs button');
+  tabs.forEach(btn => btn.addEventListener('click', () => {
+    tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(btn.dataset.page).classList.add('active');
+  }));
+
+  function fit() {
+    const s = Math.min(window.innerWidth / 980, (window.innerHeight - 52) / 690);
+    document.documentElement.style.setProperty('--s', Math.max(s, 0.5).toFixed(4));
+  }
+  window.addEventListener('resize', fit);
+  fit();
+</script>
+</body>
+</html>
