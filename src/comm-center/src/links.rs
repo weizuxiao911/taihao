@@ -138,10 +138,11 @@ impl Link for SseHttpLink {
                 format!("上报失败: {}", e)
             })
     }
-    fn recv(&self, timeout: Duration) -> Result<Option<(String, String)>, String> {
+    fn recv(&self, _timeout: Duration) -> Result<Option<(String, String)>, String> {
         // SSE 长轮询端点：GET {base}/events/{topic_prefix}
+        // 轮询超时仅对 UDP recv 有意义；HTTP 请求用内部固定超时 (2s)，避免短轮询窗口下必然超时
         let url = format!("{}/events/{}", self.base.trim_end_matches('/'), self.topic_prefix.trim_end_matches('/'));
-        let agent = ureq::AgentBuilder::new().timeout(timeout).build();
+        let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(2)).build();
         let resp = agent
             .get(&url)
             .call()
