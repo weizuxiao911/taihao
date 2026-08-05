@@ -24,6 +24,9 @@ pub struct Config {
     /// 健康检查周期（秒）
     #[serde(default = "default_health_secs")]
     pub health_check_secs: u64,
+    /// 周期状态上报间隔（秒）：0 = 关闭周期上报（默认 10s）
+    #[serde(default = "default_status_report_secs")]
+    pub status_report_secs: u64,
     /// 故障切换阈值：连续失败 N 次切换
     #[serde(default = "default_fail_threshold")]
     pub fail_threshold: u32,
@@ -58,6 +61,9 @@ fn default_mesh_port() -> u16 {
 fn default_health_secs() -> u64 {
     5
 }
+fn default_status_report_secs() -> u64 {
+    10
+}
 fn default_fail_threshold() -> u32 {
     3
 }
@@ -73,6 +79,7 @@ impl Default for Config {
             topic_prefix: default_topic_prefix(),
             mesh_port: default_mesh_port(),
             health_check_secs: default_health_secs(),
+            status_report_secs: default_status_report_secs(),
             fail_threshold: default_fail_threshold(),
             routes: vec![
                 RouteDef { topic: "task".into(), action: "builtin:report".into() },
@@ -86,20 +93,27 @@ impl Default for Config {
 impl Config {
     pub fn load(path: &Path) -> (Config, Vec<String>) {
         let mut warnings = Vec::new();
-        let content = match std::fs::read_to_string(path) {
-            Ok(c) => c,
+        let mut cfg = match std::fs::read_to_string(path) {
+            Ok(content) => match toml::from_str::<Config>(&content) {
+                Ok(cfg) => cfg,
+                Err(e) => {
+                    warnings.push(format!("配置解析失败: {}，使用默认配置", e));
+                    Config::default()
+                }
+            },
             Err(e) => {
                 warnings.push(format!("配置 {} 读取失败: {}，使用默认配置", path.display(), e));
-                return (Config::default(), warnings);
+                Config::default()
             }
         };
-        match toml::from_str::<Config>(&content) {
-            Ok(cfg) => (cfg, warnings),
-            Err(e) => {
-                warnings.push(format!("配置解析失败: {}，使用默认配置", e));
-                (Config::default(), warnings)
+        // 后台端点环境变量覆盖（REMOTE_ENDPOINT，部署时经 systemd EnvironmentFile 注入）
+        if let Ok(ep) = std::env::var("REMOTE_ENDPOINT") {
+            if !ep.is_empty() {
+                warnings.push(format!("REMOTE_ENDPOINT 环境变量覆盖 remote_endpoint: {}", ep));
+                cfg.remote_endpoint = ep;
             }
         }
+        (cfg, warnings)
     }
 
     pub fn find_route(&self, topic: &str) -> Option<&RouteDef> {

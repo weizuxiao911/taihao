@@ -12,6 +12,8 @@ topic_prefix = "taihao/"
 mesh_port = 41800
 # 健康检查周期（秒）
 health_check_secs = 5
+# 周期状态上报间隔（秒，0=关闭；后台端点可用 REMOTE_ENDPOINT 环境变量覆盖）
+status_report_secs = 10
 # 故障切换阈值：连续失败 N 次切换
 fail_threshold = 3
 # 状态上报文件（调试 / 验证）

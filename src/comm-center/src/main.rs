@@ -60,6 +60,8 @@ fn main() {
 
     let started = std::time::Instant::now();
     let stop = Arc::new(AtomicBool::new(false));
+    let mut last_status_report = std::time::Instant::now();
+    let report_interval = Duration::from_secs(cfg.status_report_secs.max(1));
     loop {
         if stop.load(Ordering::Relaxed) {
             break;
@@ -68,6 +70,21 @@ fn main() {
             if started.elapsed() >= Duration::from_secs(secs) {
                 log::info!("达到运行时长，退出");
                 break;
+            }
+        }
+        // 周期状态上报（实时时间回传：设备状态 + 时间戳 + 链路健康 → 控制侧）
+        if last_status_report.elapsed() >= report_interval {
+            last_status_report = std::time::Instant::now();
+            let status = serde_json::json!({
+                "ts": std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0),
+                "active_primary": if dispatch.current_primary_is_remote.load(Ordering::Relaxed) { "remote" } else { "mesh" },
+                "remote_failures": dispatch.primary_health.failures(),
+                "mesh_failures": dispatch.backup_health.failures(),
+                "uptime_secs": started.elapsed().as_secs(),
+            });
+            match dispatch.send("status/device", &status.to_string()) {
+                Ok(()) => log::debug!("周期状态上报成功: {}", status),
+                Err(e) => log::warn!("周期状态上报失败: {}", e),
             }
         }
         match dispatch.recv(Duration::from_millis(500)) {
