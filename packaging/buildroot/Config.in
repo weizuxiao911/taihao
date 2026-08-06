@@ -1,1 +1,0 @@
-source "$BR2_EXTERNAL_TAIHAO_PATH/package/taihao-pi-agent/Config.in"
