@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>太昊 OS — Linux 内核工作原理说明书</title>
+<style>
+  :root{
+    --bg:#0f1520; --panel:#16202e; --panel2:#1b2738; --line:#2a3a52;
+    --txt:#e6edf5; --dim:#9fb0c6; --faint:#6c7e96;
+    --keep:#3fb950; --cid:#d29922; --kill:#f85149; --opt:#a371f7;
+    --keepbg:rgba(63,185,80,.12); --cidbg:rgba(210,153,34,.13);
+    --killbg:rgba(248,81,73,.12); --optbg:rgba(163,113,247,.13);
+    --accent:#58a6ff; --accent2:#79c0ff;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--txt); font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",system-ui,sans-serif; line-height:1.6; padding-bottom:80px;}
+  .wrap{max-width:1080px; margin:0 auto; padding:0 24px;}
+  h1{font-size:30px; letter-spacing:1px; margin:0 0 6px;}
+  h2{font-size:21px; margin:44px 0 14px; padding-left:12px; border-left:4px solid var(--accent);}
+  h3{font-size:16px; margin:22px 0 10px; color:var(--accent2);}
+  .sub{color:var(--dim); font-size:14px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin:14px 0;}
+  .grid{display:grid; gap:14px;}
+  .g2{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:820px){.g2,.g3{grid-template-columns:1fr;}}
+  table{border-collapse:collapse; width:100%; font-size:13.5px; margin:10px 0;}
+  th,td{border:1px solid var(--line); padding:7px 10px; text-align:left; vertical-align:top;}
+  th{background:var(--panel2); color:var(--accent2); font-weight:600; white-space:nowrap;}
+  tr:nth-child(even) td{background:rgba(255,255,255,.02);}
+  code{background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-family:"SF Mono",Consolas,monospace; font-size:12.5px; color:var(--accent2);}
+  .pill{display:inline-block; padding:1px 10px; border-radius:999px; font-size:12px; font-weight:600; text-align:center; white-space:nowrap;}
+  .p-keep{background:var(--keepbg); color:var(--keep); border:1px solid var(--keep);}
+  .p-cid{background:var(--cidbg); color:var(--cid); border:1px solid var(--cid);}
+  .p-kill{background:var(--killbg); color:var(--kill); border:1px solid var(--kill);}
+  .p-opt{background:var(--optbg); color:var(--opt); border:1px solid var(--opt);}
+  .badge{display:inline-grid; place-items:center; min-width:34px; height:22px; padding:0 6px; border-radius:6px; font-size:12px; font-weight:700;}
+  .b-keep{background:var(--keepbg); color:var(--keep);} .b-cid{background:var(--cidbg); color:var(--cid);} .b-kill{background:var(--killbg); color:var(--kill);} .b-opt{background:var(--optbg); color:var(--opt);}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; color:var(--dim); font-size:13px; margin:8px 0;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .stat{font-size:32px; font-weight:700; color:var(--accent2); line-height:1; display:block; margin-bottom:6px;}
+  .stat small{font-size:13px; color:var(--dim); font-weight:400; margin-left:4px;}
+  .kpi{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:16px; text-align:center;}
+  .kpi .lb{color:var(--dim); font-size:13px;}
+  .sec-num{color:var(--faint); font-family:monospace;}
+  .flow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px;}
+  .fnode{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; flex:1; min-width:120px; text-align:center;}
+  .fnode b{display:block; color:var(--accent2); font-size:14px;}
+  .fnode span{color:var(--dim); font-size:11.5px; display:block; margin-top:2px;}
+  .farr{color:var(--accent); font-weight:700; flex:0 0 auto;}
+  .note{background:var(--killbg); border:1px solid var(--kill); border-radius:10px; padding:12px 16px; color:var(--txt); font-size:13.5px;}
+  .note b{color:var(--kill);}
+  .ok{color:var(--keep); font-weight:600;} .warn{color:var(--cid); font-weight:600;}
+  .m2{display:grid; grid-template-columns:130px 1fr; border-top:1px solid var(--line); padding:8px 0; font-size:13.5px;}
+  .m2:first-of-type{border-top:none;} .m2 .k{color:var(--dim); font-weight:600;}
+  details{margin:6px 0;}
+  summary{cursor:pointer; font-weight:600; color:var(--accent2); padding:6px 0;}
+  .tag{display:inline-block; background:var(--panel2); border:1px solid var(--line); color:var(--dim); border-radius:6px; padding:0 8px; font-size:12px; margin:2px;}
+  .hero{background:linear-gradient(135deg,var(--panel) 0%,var(--panel2) 100%); border:1px solid var(--line); border-radius:16px; padding:28px 30px; margin-bottom:24px;}
+  .hero .spec{display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:13px; color:var(--dim);}
+  .hero .spec b{color:var(--txt); font-weight:600;}
+  .timeline{position:relative; margin-left:8px; padding-left:22px; border-left:2px solid var(--line);}
+  .tl{position:relative; margin:0 0 16px; }
+  .tl::before{content:""; position:absolute; left:-27px; top:6px; width:10px; height:10px; border-radius:50%; background:var(--accent);}
+  .tl b{color:var(--accent2);} .tl span{color:var(--dim); font-size:13px; display:block; margin-top:2px;}
+  .kvans{font-family:"SF Mono",Consolas,monospace; font-size:13px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>太昊 OS — Linux 内核工作原理说明书</h1>
+    <div class="sub">qemu-aarch64 仿真原型开发验证平台 · 依据 <code>docs/linux-内核裁剪方案.md</code> v0.0.7 · 决策表 87 项</div>
+    <div class="spec">
+      <span>内核 <b>Linux 6.6 LTS</b></span>
+      <span>平台 <b>qemu-aarch64 virt</b></span>
+      <span>实时 <b>PREEMPT_VOLUNTARY</b>(不上 RT)</span>
+      <span>压缩 <b>zstd</b></span>
+      <span>开发主机 <b>amd64</b></span>
+    </div>
+  </div>
+
+  <h2>一、内核定位与双架构</h2>
+  <div class="grid g3">
+    <div class="card">
+      <span class="stat">6.6<small>LTS</small></span>
+      <div class="lb">内核长期支持版本,RT patch 维护良好;仿真不上 PREEMPT_RT,迭代速度优先</div>
+    </div>
+    <div class="card">
+      <span class="stat">2<small>架构</small></span>
+      <div class="lb">arm64(主仿真,真机同构) + amd64(开发 / 等价复用)</div>
+    </div>
+    <div class="card">
+      <span class="stat">87<small>决策项</small></span>
+      <div class="lb">子系统裁剪决策表 #1~#87,双架构共享同一契约</div>
+    </div>
+  </div>
+  <div class="card">
+    <h3>amd64 等价替换规则(仅平台相关)</h3>
+    <table>
+      <tr><th>契约条目</th><th>arm64 / qemu virt</th><th>amd64 / qemu q35</th></tr>
+      <tr><td><span class="sec-num">串口 (#53)</span></td><td>pl011</td><td>8250(16550A)</td></tr>
+      <tr><td><span class="sec-num">RTC (#63)</span></td><td>pl031</td><td>RTC_CMOS</td></tr>
+      <tr><td><span class="sec-num">时钟 (#83)</span></td><td>arch timer</td><td>TSC + HPET</td></tr>
+      <tr><td><span class="sec-num">固件 (#81)</span></td><td>ACPI + PSCI</td><td>ACPI</td></tr>
+      <tr><td><span class="sec-num">平台 (#83)</span></td><td>qemu virt DTS</td><td>qemu q35</td></tr>
+    </table>
+    <div class="note">其余条目<b>架构中立,零差异</b>;两架构共用同一份决策表,各自维护独立 <code>.config</code> 片段。</div>
+  </div>
+
+  <h2>二、两套内核并存</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>CI 冒烟内核(<code>qemu-aarch64-ci.config</code>)</h3>
+      <div class="m2"><div class="k">角色</div><div>提交门禁;验证 kernel + systemd + cgroup + mount + 基础 IO</div></div>
+      <div class="m2"><div class="k">通过标准</div><div>启动后 systemd 到达 <code>basic.target</code></div></div>
+      <div class="m2"><div class="k">配置</div><div>最小集 + virtio-net loopback;四红线全阻断</div></div>
+      <div class="m2"><div class="k">模块</div><div><code>CONFIG_MODULES=n</code>,全部内置进 zImage</div></div>
+    </div>
+    <div class="card">
+      <h3>端到端内核(<code>qemu-aarch64-e2e.config</code>)</h3>
+      <div class="m2"><div class="k">角色</div><div>完整集成验证;跑 pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge 全套服务</div></div>
+      <div class="m2"><div class="k">通过标准</div><div>全部服务 systemd unit <code>active</code></div></div>
+      <div class="m2"><div class="k">配置</div><div>保留全部接入位所需子系统(在 CI 最小基础上恢复)</div></div>
+      <div class="m2"><div class="k">模块</div><div><code>CONFIG_MODULES=y</code>,可选驱动按需加载</div></div>
+    </div>
+  </div>
+
+  <h2>三、CI 冒烟四条红线</h2>
+  <div class="grid g2">
+    <div class="card note"><b>1 · 禁止业务硬件模拟驱动内置</b><br>SPI / I2C / GPIO / V4L2 / CAN / SocketCAN / PWM / WATCHDOG / hwmon 等接入位接口一律不进 CI 内核,防止 CI 隐性依赖 HAL 硬件节点。</div>
+    <div class="card note"><b>2 · 禁止内核模块</b><br><code>CONFIG_MODULES=n</code>,杜绝"模块缺失"漏测。</div>
+  </div>
+  <div class="grid g2">
+    <div class="card note"><b>3 · 禁止兼容 cgroup v1</b><br>统一 cgroup v2 单一模式,systemd 不开 v1 fallback。</div>
+    <div class="card note"><b>4 · 禁止业务共享目录</b><br>virtio-9p / virtio-fs 不进 CI;主机目录共享仅 E2E 调试启用。</div>
+  </div>
+
+  <h2>四、子系统裁剪决策表(87 项)</h2>
+  <div class="legend">
+    <span><span class="pill p-keep">保留</span> 两套都开</span>
+    <span><span class="pill p-cid">CI 裁</span> CI 裁掉 · E2E 保留</span>
+    <span><span class="pill p-kill">全裁</span> 两套都裁</span>
+    <span><span class="pill p-opt">可选</span> 按需,默认关</span>
+  </div>
+
+  <details open>
+  <summary>4.1 网络协议栈 <span class="tag">#1~9</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">1</span></td><td>TCP / UDP / IPv4 / IPv6</td><td><span class="pill p-keep">保留</span></td><td>comm-center / mesh UDP 基线</td></tr>
+    <tr><td><span class="badge b-keep">2</span></td><td>ICMP / ping</td><td><span class="pill p-keep">保留</span></td><td>排错</td></tr>
+    <tr><td><span class="badge b-keep">3</span></td><td>unix domain socket / packet socket / netlink</td><td><span class="pill p-keep">保留</span></td><td>工具通信</td></tr>
+    <tr><td><span class="badge b-keep">4</span></td><td>loopback / bridge</td><td><span class="pill p-keep">保留</span></td><td>本地拓扑</td></tr>
+    <tr><td><span class="badge b-kill">5</span></td><td>SCTP / DCCP / RDS / TIPC / RXRPC</td><td><span class="pill p-kill">全裁</span></td><td>端到端用不到</td></tr>
+    <tr><td><span class="badge b-kill">6</span></td><td>Appletalk / IPX / DECnet / Econet / WAN</td><td><span class="pill p-kill">全裁</span></td><td>古董协议</td></tr>
+    <tr><td><span class="badge b-kill">7</span></td><td>Bluetooth / WiFi 协议栈</td><td><span class="pill p-kill">全裁</span></td><td>留给真机 / 厂商 HAL</td></tr>
+    <tr><td><span class="badge b-kill">8</span></td><td>NFC / IRDA / amateur radio</td><td><span class="pill p-kill">全裁</span></td><td>端到端无场景</td></tr>
+    <tr><td><span class="badge b-cid">9</span></td><td>CAN / SocketCAN</td><td><span class="pill p-cid">CI 裁</span></td><td>hal-gateway 用 device node;CI 不验证服务</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.2 文件系统 <span class="tag">#10~18</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">10</span></td><td>ext4</td><td><span class="pill p-keep">保留</span></td><td>rootfs</td></tr>
+    <tr><td><span class="badge b-keep">11</span></td><td>tmpfs / devtmpfs / devpts / sysfs / proc / configfs</td><td><span class="pill p-keep">保留</span></td><td>systemd + userspace 基线</td></tr>
+    <tr><td><span class="badge b-cid">12</span></td><td>overlayfs</td><td><span class="pill p-cid">CI 裁</span></td><td>rootfs 上层;CI 不依赖容器</td></tr>
+    <tr><td><span class="badge b-cid">13</span></td><td>virtio-9p / virtio-fs</td><td><span class="pill p-cid">CI 裁</span></td><td>E2E 调试需要主机目录共享,CI 冒烟不需要</td></tr>
+    <tr><td><span class="badge b-opt">14</span></td><td>squashfs</td><td><span class="pill p-opt">可选</span></td><td>只读 rootfs 备用</td></tr>
+    <tr><td><span class="badge b-cid">15</span></td><td>FUSE</td><td><span class="pill p-cid">CI 裁</span></td><td>sandbox 友好;CI 不依赖 sandbox</td></tr>
+    <tr><td><span class="badge b-kill">16</span></td><td>btrfs / xfs / f2fs / NTFS / exFAT</td><td><span class="pill p-kill">全裁</span></td><td>留给真机</td></tr>
+    <tr><td><span class="badge b-kill">17</span></td><td>jffs2 / ubifs / cramfs</td><td><span class="pill p-kill">全裁</span></td><td>留给真机</td></tr>
+    <tr><td><span class="badge b-opt">18</span></td><td>NFS client</td><td><span class="pill p-opt">可选</span></td><td>按需</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.3 安全 / 沙箱 <span class="tag">#19~27</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">19</span></td><td>namespaces(PID/NET/IPC/UTS/USER/MOUNT/CGROUP/TIME)</td><td><span class="pill p-keep">保留</span></td><td>四层隔离栈基线</td></tr>
+    <tr><td><span class="badge b-keep">20</span></td><td>seccomp BPF</td><td><span class="pill p-keep">保留</span></td><td>extension-bridge 沙箱</td></tr>
+    <tr><td><span class="badge b-keep">21</span></td><td>capabilities</td><td><span class="pill p-keep">保留</span></td><td>sandbox</td></tr>
+    <tr><td><span class="badge b-keep">22</span></td><td>AppArmor</td><td><span class="pill p-keep">保留</span></td><td>主 LSM(与 SELinux 二选一)</td></tr>
+    <tr><td><span class="badge b-kill">23</span></td><td>SELinux / SMACK</td><td><span class="pill p-kill">全裁</span></td><td>已被 AppArmor 替代</td></tr>
+    <tr><td><span class="badge b-keep">24</span></td><td>Yama</td><td><span class="pill p-keep">保留</span></td><td>ptrace 边界</td></tr>
+    <tr><td><span class="badge b-opt">25</span></td><td>IMA / EVM</td><td><span class="pill p-opt">可选</span></td><td>度量场景</td></tr>
+    <tr><td><span class="badge b-opt">26</span></td><td>LandLock</td><td><span class="pill p-opt">可选</span></td><td>沙箱补充</td></tr>
+    <tr><td><span class="badge b-kill">27</span></td><td>TPM</td><td><span class="pill p-kill">全裁</span></td><td>qemu 仿真意义有限</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.4 调试 / 可观测性 <span class="tag">#28~33</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">28</span></td><td>printk / dmesg / magic SysRq / IKCONFIG</td><td><span class="pill p-keep">保留</span></td><td>排错基线</td></tr>
+    <tr><td><span class="badge b-cid">29</span></td><td>ftrace / perf events</td><td><span class="pill p-cid">CI 裁</span></td><td>rt-loop 抖动排查;CI 不排查抖动</td></tr>
+    <tr><td><span class="badge b-cid">30</span></td><td>kprobes / bpf syscall / BPF JIT</td><td><span class="pill p-cid">CI 裁</span></td><td>可观测性;CI 不依赖</td></tr>
+    <tr><td><span class="badge b-kill">31</span></td><td>kdump / crashkernel</td><td><span class="pill p-kill">全裁</span></td><td>仿真无意义</td></tr>
+    <tr><td><span class="badge b-opt">32</span></td><td>lockdep / kmemleak / kcsan / KASAN / UBSAN</td><td><span class="pill p-opt">可选</span></td><td>仅 debug build 开</td></tr>
+    <tr><td><span class="badge b-kill">33</span></td><td>kgdb / kdb</td><td><span class="pill p-kill">全裁</span></td><td>仿真无硬件 breakpoint</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.5 IPC <span class="tag">#34~38</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">34</span></td><td>pipe / unix / eventfd / signalfd / timerfd / inotify / fanotify / epoll</td><td><span class="pill p-keep">保留</span></td><td>全场景基线</td></tr>
+    <tr><td><span class="badge b-cid">35</span></td><td>System V IPC</td><td><span class="pill p-cid">CI 裁</span></td><td>精简 CI 基线;E2E 可选开启</td></tr>
+    <tr><td><span class="badge b-cid">36</span></td><td>POSIX mqueue</td><td><span class="pill p-cid">CI 裁</span></td><td>同上</td></tr>
+    <tr><td><span class="badge b-keep">37</span></td><td>POSIX shmem</td><td><span class="pill p-keep">保留</span></td><td>systemd 部分组件依赖 /dev/shm POSIX 语义</td></tr>
+    <tr><td><span class="badge b-kill">38</span></td><td>遗留 IPC</td><td><span class="pill p-kill">全裁</span></td><td>systemd 不依赖</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.6 块设备 / IO <span class="tag">#39~44</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">39</span></td><td>virtio-blk / virtio-scsi / loop</td><td><span class="pill p-keep">保留</span></td><td>块设备</td></tr>
+    <tr><td><span class="badge b-keep">40</span></td><td>io_uring</td><td><span class="pill p-keep">保留</span></td><td>高频 IO</td></tr>
+    <tr><td><span class="badge b-cid">41</span></td><td>DM(device-mapper)</td><td><span class="pill p-cid">CI 裁</span></td><td>E2E 用于容器 / dm-verity;CI 不依赖</td></tr>
+    <tr><td><span class="badge b-opt">42</span></td><td>md(RAID)</td><td><span class="pill p-opt">可选</span></td><td>按需</td></tr>
+    <tr><td><span class="badge b-kill">43</span></td><td>MFM / RLL / ESDI / IDE / PATA</td><td><span class="pill p-kill">全裁</span></td><td>古董</td></tr>
+    <tr><td><span class="badge b-kill">44</span></td><td>mtip32xx</td><td><span class="pill p-kill">全裁</span></td><td>厂商专用</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.7 网络设备 <span class="tag">#45~51</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">45</span></td><td>virtio-net / loopback</td><td><span class="pill p-keep">保留</span></td><td>qemu 网络</td></tr>
+    <tr><td><span class="badge b-cid">46</span></td><td>tun / tap</td><td><span class="pill p-cid">CI 裁</span></td><td>mesh UDP 透传;CI 不验证 mesh</td></tr>
+    <tr><td><span class="badge b-keep">47</span></td><td>virtio-balloon</td><td><span class="pill p-keep">保留</span></td><td>qemu 内存气泡</td></tr>
+    <tr><td><span class="badge b-cid">48</span></td><td>virtio-vsock</td><td><span class="pill p-cid">CI 裁</span></td><td>E2E 调试可选</td></tr>
+    <tr><td><span class="badge b-cid">49</span></td><td>virtio-crypto</td><td><span class="pill p-cid">CI 裁</span></td><td>E2E 调试可选</td></tr>
+    <tr><td><span class="badge b-kill">50</span></td><td>全部物理网卡驱动</td><td><span class="pill p-kill">全裁</span></td><td>qemu 不需要</td></tr>
+    <tr><td><span class="badge b-kill">51</span></td><td>WiFi / WWAN / BT 设备驱动</td><td><span class="pill p-kill">全裁</span></td><td>端到端无场景</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.8 输入 / 显示 / 控制台 <span class="tag">#52~58</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">52</span></td><td>virtio-console</td><td><span class="pill p-keep">保留</span></td><td>serial console</td></tr>
+    <tr><td><span class="badge b-keep">53</span></td><td>8250 / pl011 / AMBA-pl011 串口</td><td><span class="pill p-keep">保留</span></td><td>console 基线</td></tr>
+    <tr><td><span class="badge b-cid">54</span></td><td>virtio-input</td><td><span class="pill p-cid">CI 裁</span></td><td>CI 不需要交互</td></tr>
+    <tr><td><span class="badge b-cid">55</span></td><td>virtio-gpu + DRM / KMS</td><td><span class="pill p-cid">CI 裁</span></td><td>CI 不渲染</td></tr>
+    <tr><td><span class="badge b-cid">56</span></td><td>framebuffer 简单驱动</td><td><span class="pill p-cid">CI 裁</span></td><td>CI 不需要 framebuffer</td></tr>
+    <tr><td><span class="badge b-kill">57</span></td><td>HID / 触摸 / 物理键盘</td><td><span class="pill p-kill">全裁</span></td><td>端到端无场景</td></tr>
+    <tr><td><span class="badge b-kill">58</span></td><td>声卡(OSS / ALSA / sound)</td><td><span class="pill p-kill">全裁</span></td><td>端到端用不到</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.9 字符 / 平台设备 <span class="tag">#59~66</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-cid">59</span></td><td>SPI / I2C / GPIO(spidev / i2c-dev / gpiochip)</td><td><span class="pill p-cid">CI 裁</span></td><td>hal-gateway 用 device node;CI 不验证</td></tr>
+    <tr><td><span class="badge b-cid">60</span></td><td>PWM / pwmchip</td><td><span class="pill p-cid">CI 裁</span></td><td>同上</td></tr>
+    <tr><td><span class="badge b-cid">61</span></td><td>V4L2 / media / videobuf2</td><td><span class="pill p-cid">CI 裁</span></td><td>hal-gateway camera</td></tr>
+    <tr><td><span class="badge b-cid">62</span></td><td>WATCHDOG / hwmon</td><td><span class="pill p-cid">CI 裁</span></td><td>rt-loop 健康检查</td></tr>
+    <tr><td><span class="badge b-keep">63</span></td><td>RTC(pl031 / rtc-generic)</td><td><span class="pill p-keep">保留</span></td><td>时间同步</td></tr>
+    <tr><td><span class="badge b-keep">64</span></td><td>CPU frequency / cpuidle</td><td><span class="pill p-keep">保留</span></td><td>性能调节</td></tr>
+    <tr><td><span class="badge b-keep">65</span></td><td>virtio-rng</td><td><span class="pill p-keep">保留</span></td><td>qemu 平台熵源</td></tr>
+    <tr><td><span class="badge b-cid">66</span></td><td>USB 控制器(xhci / ehci / ohci)</td><td><span class="pill p-cid">CI 裁</span></td><td>E2E 可选;CI 不验证 USB 外设</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.10 电源 / 内存 <span class="tag">#67~71</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">67</span></td><td>THP / hugetlb / KSM</td><td><span class="pill p-keep">保留</span></td><td>内存优化</td></tr>
+    <tr><td><span class="badge b-opt">68</span></td><td>zswap / zram</td><td><span class="pill p-opt">可选</span></td><td>仿真用不到</td></tr>
+    <tr><td><span class="badge b-opt">69</span></td><td>swap</td><td><span class="pill p-opt">可选</span></td><td>端到端 4GB 可能不需要</td></tr>
+    <tr><td><span class="badge b-kill">70</span></td><td>suspend / hibernate</td><td><span class="pill p-kill">全裁</span></td><td>仿真无意义</td></tr>
+    <tr><td><span class="badge b-kill">71</span></td><td>NUMA balancing</td><td><span class="pill p-kill">全裁</span></td><td>qemu 默认非 NUMA</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.11 调度 / cgroup <span class="tag">#72~77</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">72</span></td><td>CFS + SCHED_NORMAL/BATCH/IDLE</td><td><span class="pill p-keep">保留</span></td><td>基线</td></tr>
+    <tr><td><span class="badge b-keep">73</span></td><td>SCHED_FIFO / SCHED_RR</td><td><span class="pill p-keep">保留</span></td><td>rt-loop 实时任务</td></tr>
+    <tr><td><span class="badge b-kill">74</span></td><td>SCHED_DEADLINE</td><td><span class="pill p-kill">全裁</span></td><td>端到端用不到</td></tr>
+    <tr><td><span class="badge b-kill">75</span></td><td>cgroup v1</td><td><span class="pill p-kill">全裁</span></td><td>统一 cgroup v2 单一模式</td></tr>
+    <tr><td><span class="badge b-keep">76</span></td><td>cgroup v2(cpuset / memory / cpu / io / pids / freezer)</td><td><span class="pill p-keep">保留</span></td><td>systemd 资源切片 + rt-loop 隔离基线</td></tr>
+    <tr><td><span class="badge b-keep">77</span></td><td>isolcpus</td><td><span class="pill p-keep">保留</span></td><td>rt-loop CPU 隔离</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.12 模块化 <span class="tag">#78~79</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">78</span></td><td>CONFIG_MODULES(端到端)</td><td><span class="pill p-keep">保留(E2E)</span></td><td>可选驱动按需加载</td></tr>
+    <tr><td><span class="badge b-kill">79</span></td><td>CONFIG_MODULES(CI 冒烟)</td><td><span class="pill p-kill">全裁</span></td><td>全部内置编译进 zImage,杜绝"模块缺失"漏测</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.13 启动 / 平台 <span class="tag">#80~84</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-keep">80</span></td><td>EFI / U-Boot boot</td><td><span class="pill p-keep">保留</span></td><td>qemu pflash + chain</td></tr>
+    <tr><td><span class="badge b-keep">81</span></td><td>ACPI / PSCI</td><td><span class="pill p-keep">保留</span></td><td>qemu 平台</td></tr>
+    <tr><td><span class="badge b-keep">82</span></td><td>earlycon / earlyprintk</td><td><span class="pill p-keep">保留</span></td><td>排错</td></tr>
+    <tr><td><span class="badge b-keep">83</span></td><td>arm64 generic timer / qemu virt DTS</td><td><span class="pill p-keep">保留</span></td><td>平台基础</td></tr>
+    <tr><td><span class="badge b-kill">84</span></td><td>kexec</td><td><span class="pill p-kill">全裁</span></td><td>OTA 走 A/B 双分区 + bootloader 切换</td></tr>
+  </table>
+  </details>
+
+  <details open>
+  <summary>4.14 NPU / GPU / VPU <span class="tag">#85~87</span></summary>
+  <table>
+    <tr><th>#</th><th>子系统</th><th>决策</th><th>理由</th></tr>
+    <tr><td><span class="badge b-kill">85</span></td><td>NPU 厂商驱动(RKNN / 华为 NPU / …)</td><td><span class="pill p-kill">全裁</span></td><td>真机才需要;仿真跑 LLM 走远端 provider</td></tr>
+    <tr><td><span class="badge b-kill">86</span></td><td>GPU 厂商驱动(Mali / Adreno / …)</td><td><span class="pill p-kill">全裁</span></td><td>同上</td></tr>
+    <tr><td><span class="badge b-kill">87</span></td><td>VPU 视频编解码硬件加速</td><td><span class="pill p-kill">全裁</span></td><td>同上</td></tr>
+  </table>
+  </details>
+
+  <h2>五、关键 CONFIG 标记</h2>
+  <div class="card">
+  <table>
+    <tr><th>CONFIG</th><th>取值</th><th>说明</th></tr>
+    <tr><td><code>PREEMPT_VOLUNTARY</code></td><td class="ok">y</td><td>不上 RT patch;迭代速度优先</td></tr>
+    <tr><td><code>PREEMPT_RT</code></td><td class="warn">n</td><td>真机才考虑</td></tr>
+    <tr><td><code>HZ=1000</code></td><td class="ok">y</td><td>rt-loop 抖动窗口</td></tr>
+    <tr><td><code>NO_HZ_FULL</code></td><td class="ok">y</td><td>隔离核更平滑</td></tr>
+    <tr><td><code>IKCONFIG</code> / <code>IKCONFIG_PROC</code></td><td class="ok">y</td><td>内核自带配置</td></tr>
+    <tr><td><code>MAGIC_SYSRQ</code></td><td class="ok">y</td><td>排错</td></tr>
+    <tr><td><code>SECURITY</code> / <code>SECURITY_APPARMOR</code></td><td class="ok">y</td><td>主 LSM(AppArmor)</td></tr>
+    <tr><td><code>SECCOMP</code> / <code>SECCOMP_FILTER</code></td><td class="ok">y</td><td>沙箱</td></tr>
+    <tr><td><code>NAMESPACES</code> 全集</td><td class="ok">y</td><td>沙箱隔离</td></tr>
+    <tr><td><code>CGROUP_*</code> v2 子集</td><td class="ok">y</td><td>systemd 单一 v2,不开 v1 fallback</td></tr>
+    <tr><td><code>BPF</code> / <code>BPF_SYSCALL</code> / <code>BPF_JIT</code></td><td class="ok">y(仅 E2E)</td><td>可观测性</td></tr>
+    <tr><td><code>DEBUG_KERNEL</code></td><td class="warn">n</td><td>性能优先</td></tr>
+    <tr><td><code>LOCKDEP</code> / <code>KMEMLEAK</code> / <code>KASAN</code> / <code>UBSAN</code></td><td class="warn">n</td><td>debug build 开</td></tr>
+    <tr><td><code>STATIC_USERMODEHELPER</code></td><td class="ok">y</td><td>安全</td></tr>
+    <tr><td><code>CHECKPOINT_RESTORE</code></td><td class="ok">y</td><td>系统恢复</td></tr>
+    <tr><td><code>MODULES</code>(CI / E2E)</td><td class="warn">n / y</td><td><b>CI:禁止模块(硬约束)</b>;E2E:按需加载</td></tr>
+    <tr><td>内核压缩</td><td class="ok">zstd</td><td>启动速度</td></tr>
+    <tr><td><code>KEXEC</code></td><td class="warn">n</td><td>OTA 走 A/B 双系统分区</td></tr>
+  </table>
+  </div>
+
+  <h2>六、快速迭代技术栈</h2>
+  <div class="card">
+    <div class="flow">
+      <div class="fnode"><b>Linux 6.6 源码</b><span>固定 commit v6.6 · 杜绝上游漂移</span></div><div class="farr">→</div>
+      <div class="fnode"><b>ccache</b><span>统一缓存 · 命中加速</span></div><div class="farr">→</div>
+      <div class="fnode"><b>merge_config</b><span>defconfig + 裁剪片段</span></div><div class="farr">→</div>
+      <div class="fnode"><b>并行编译</b><span>增量 make</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Image + DTB + initramfs</b><span>最小根</span></div><div class="farr">→</div>
+      <div class="fnode"><b>qemu 启动</b><span>savevm / loadvm</span></div>
+    </div>
+    <table style="margin-top:14px">
+      <tr><th>流程环节</th><th>落地脚本</th><th>说明</th></tr>
+      <tr><td>源码拉取 + 锁定 commit</td><td><code>build-kernel.sh ci|e2e</code></td><td>自动 clone Linux 6.6 并 checkout 锁定 commit(v6.6)</td></tr>
+      <tr><td>配置合并</td><td><code>build-kernel.sh ci|e2e</code></td><td>defconfig + <code>qemu-aarch64-{ci,e2e}.config</code> 片段</td></tr>
+      <tr><td>编译 + initramfs + 状态盘</td><td><code>build-kernel.sh ci|e2e</code></td><td>产出 <code>out/arm64-{ci,e2e}/Image</code> / <code>initramfs.cpio</code> / <code>snap/boot-snap.qcow2</code></td></tr>
+      <tr><td>CI 冒烟启动</td><td><code>qemu-start-ci.sh</code></td><td>无 9p,等待 basic.target,退出码 = 校验结果</td></tr>
+      <tr><td>E2E 启动(9p + 快照)</td><td><code>qemu-start-e2e.sh</code></td><td>9p 共享;快照 save-snap / load-snap / reset-snap 子命令</td></tr>
+    </table>
+  </div>
+  <div class="grid g3">
+    <div class="kpi"><span class="stat">3<small>min</small></span><div class="lb">冷构建上限</div></div>
+    <div class="kpi"><span class="stat">30<small>s</small></span><div class="lb">增量构建上限</div></div>
+    <div class="kpi"><span class="stat">2<small>s</small></span><div class="lb">qemu 快照重启上限</div></div>
+  </div>
+
+  <h2>七、qemu 快照策略</h2>
+  <div class="card">
+    <div class="timeline">
+      <div class="tl"><b>0 · 状态盘承载</b><span>savevm / loadvm 需要可写块设备落盘。e2e 构建阶段产出 <code>out/arm64-e2e/snap/boot-snap.qcow2</code>(256M 状态盘),qemu 挂 <code>-drive file=...,if=virtio,format=qcow2</code>,快照写入该盘,与 rootfs 无关</span></div>
+      <div class="tl"><b>1 · 首次冷启动</b><span>保存 vmstate + memory 到状态盘,标记为 <code>boot-snap</code>;命令:<code>qemu-start-e2e.sh --save-snap</code>(或 <code>save-snap</code> 子命令)</span></div>
+      <div class="tl"><b>2 · 增量迭代</b><span>ccache 命中 → 增量编译 → 替换内核镜像 → <code>loadvm boot-snap</code> 快速重启;启动脚本自动判定快照有效性后加载</span></div>
+      <div class="tl"><b>3 · 快速回退</b><span>验证失败 → <code>loadvm boot-snap</code> 立即回退,无需重新初始化;命令:<code>qemu-start-e2e.sh load-snap</code></span></div>
+      <div class="tl"><b>4 · 失效判定</b><span>Image / initramfs / 状态盘三路 sha256 哈希比对;任一变更 → 旧快照<b style="color:var(--kill)">强制失效</b>;删除状态盘重新冷启,命令:<code>qemu-start-e2e.sh reset-snap</code></span></div>
+    </div>
+    <div class="note"><b>关键约束：</b><code>loadvm</code> 不能切换内核镜像。内核内存镜像与磁盘镜像不一致会引发不可复现异常。</div>
+  </div>
+
+  <h2>八、CI 冒烟启动时序</h2>
+  <div class="card kv">
+    <code>qemu-start-ci.sh</code> ──启动 qemu-system-aarch64──▶ qemu-aarch64(CI 不挂 9p / virtio-fs)<br>
+    qemu ──boot──▶ kernel<br>
+    kernel ──启动 pid 1──▶ systemd<br>
+    systemd ──加载 unit + mount tmpfs/sysfs/proc/devtmpfs──▶ basic.target<br>
+    probe_basic_target 串口日志正则命中 <code>basic.target</code> ──▶ 退出码 0
+  </div>
+
+  <h2>九、通过判据与超时</h2>
+  <div class="card">
+    <table>
+      <tr><th>检查项</th><th>命令</th><th>期望</th></tr>
+      <tr><td>systemd pid 1</td><td><code>systemctl is-system-running</code></td><td>running</td></tr>
+      <tr><td>basic.target</td><td><code>systemctl is-active basic.target</code></td><td>active</td></tr>
+      <tr><td>cgroup v2</td><td><code>stat -fc %T /sys/fs/cgroup</code></td><td>cgroup2fs</td></tr>
+      <tr><td>namespace</td><td><code>ls /proc/1/ns/</code></td><td>8 个命名空间</td></tr>
+      <tr><td>virtio-net</td><td><code>ip link show</code></td><td>lo + eth0</td></tr>
+      <tr><td>mount</td><td><code>mount | wc -l</code></td><td>≥ 5</td></tr>
+    </table>
+    <div class="grid g3" style="margin-top:12px">
+      <div class="kpi"><span class="stat">30<small>s</small></span><div class="lb">启动到 basic.target</div></div>
+      <div class="kpi"><span class="stat">10<small>s</small></span><div class="lb">冒烟脚本执行</div></div>
+      <div class="kpi"><span class="stat">60<small>s</small></span><div class="lb">总超时</div></div>
+    </div>
+    <div>任一检查失败 → CI 红,排查 kernel config / unit 配置 / 启动日志。</div>
+  </div>
+
+  <h2>十、与未来真机配置的关系</h2>
+  <div class="card">
+    <table>
+      <tr><th>维度</th><th>仿真</th><th>真机(未来)</th></tr>
+      <tr><td>平台</td><td>qemu virt DTS</td><td>RK3588 DTS</td></tr>
+      <tr><td>网络设备</td><td>virtio-net</td><td>rk3588 gmac / 厂商 WiFi</td></tr>
+      <tr><td>块设备</td><td>virtio-blk</td><td>eMMC / SD 控制器</td></tr>
+      <tr><td>控制台</td><td>virtio-console + pl011</td><td>物理串口</td></tr>
+      <tr><td>实时</td><td><code>PREEMPT_VOLUNTARY</code></td><td><code>PREEMPT_RT_FULL</code></td></tr>
+      <tr><td>NPU / GPU</td><td>全裁</td><td>厂商驱动</td></tr>
+      <tr><td>文件系统</td><td>ext4</td><td>ext4 + 厂商加密</td></tr>
+      <tr><td>kexec</td><td>n</td><td>n(A/B bootloader 切换)</td></tr>
+      <tr><td><code>NO_HZ_FULL</code></td><td>y(模拟 CPU 隔离)</td><td>启用 RT 后需重新评估开销</td></tr>
+    </table>
+    <div class="note"><b>共享契约:</b>真机配置独立维护(<code>real-rk3588.config</code>),子系统裁剪决策表是唯一共享契约,两份配置都从契约推导。</div>
+  </div>
+
+  <h2>十一、终端架构认知(两层模型)</h2>
+  <div class="grid g3">
+    <div class="card">
+      <h3>认知决策层 · 大脑皮层</h3>
+      <div class="m2"><div class="k">载体</div><div>RK3588 同级别 + Pi-Agent + 4-7B 多模态模型</div></div>
+      <div class="m2"><div class="k">职责</div><div>环境感知 / 任务理解 / Skill 符号编排 / 高层运动意图</div></div>
+      <div class="m2"><div class="k">频率</div><div>1-10Hz 亚秒级迭代</div></div>
+      <div class="m2"><div class="k">边界</div><div>只定"要干什么、要去哪里",不碰底层实时微操;Skill 跑在 Linux 层,基于 MCU 硬件原子原语编排</div></div>
+    </div>
+    <div class="card">
+      <h3>执行层回路 · rt-loop</h3>
+      <div class="m2"><div class="k">载体</div><div>Linux 侧</div></div>
+      <div class="m2"><div class="k">职责</div><div>接收 Agent 高层意图,生成轨迹 / 指令流下发 MCU,回收本体状态做闭环校调</div></div>
+      <div class="m2"><div class="k">频率</div><div>10-100Hz</div></div>
+      <div class="m2"><div class="k">边界</div><div>指令下发与状态回收的衔接层,不承载认知与稳控</div></div>
+    </div>
+    <div class="card">
+      <h3>稳控反射层 · 小脑 + 躯体反射</h3>
+      <div class="m2"><div class="k">载体</div><div>MCU 端控单元</div></div>
+      <div class="m2"><div class="k">职责</div><div>PID + 可选极小微模型(Pi0.5/0.6 类);扰动补偿 / 姿态稳控 / 急停</div></div>
+      <div class="m2"><div class="k">频率</div><div>毫秒-十毫秒级高速闭环</div></div>
+      <div class="m2"><div class="k">边界</div><div>不看图像、不懂业务任务;微模型失效降级回传统 PID,接口不变,上层无感</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="m2"><div class="k">职责边界</div><div>底层反射不评判高层目标合理性;业务逻辑与目标校验留给 Pi-Agent 框架;瞬时扰动底层消化,策略变更等待下一轮 Agent 推理周期</div></div>
+    <div class="m2"><div class="k">推理抽象层</div><div>OpenAI 兼容协议抽象,隔离推理后端,支持多模型服务商接入与开放生态</div></div>
+  </div>
+
+</div>
+</body>
+</html>
