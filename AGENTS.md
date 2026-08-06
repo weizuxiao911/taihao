@@ -97,7 +97,14 @@ taihao/
 ├── README.md          # 项目门面（人）
 ├── AGENTS.md          # 本文件（AI）
 ├── LICENSE            # Apache-2.0
-└── .gitignore
+├── .gitignore
+├── assets/            # 效果图
+├── 工作原理.html      # 工作机制四页图（总体架构 / 运行机制 / 安全与数据 / 接入位速查）
+├── config/kernel/     # 内核裁剪基线片段（qemu-aarch64-{ci,e2e}.config）
+├── docs/              # 设计文档（内核裁剪方案 v0.0.7 + kconfig 派生产物 + 任务文档）
+└── scripts/
+    ├── kconfig/       # merge_config.sh（内核片段合并 / savedefconfig 验证）
+    └── kernel-build/  # 构建 / 仿真脚本（build-kernel.sh + qemu-start-{ci,e2e}.sh + lib）
 ```
 
 未来新增目录 / 文件时的职责边界：
@@ -159,37 +166,25 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（M3：全模块落地）
+### 当前阶段（构建集成批次）
 
-仓库状态：五模块全部实现并接入 Buildroot（pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）；无 CI。SOP：
+仓库状态：内核裁剪契约定稿（Linux 6.6 LTS，v0.0.7 决策表 87 项）+ aarch64 基线片段（`config/kernel/qemu-aarch64-{ci,e2e}.config`）+ 映射核对表 + 简短说明，已复核通过；`scripts/kernel-build/` 构建 / 仿真脚本批次进行中；无 CI。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
-2. **本地模块验证（smoke）**：`./scripts/verify.sh smoke`
-   - cargo test 全仓（5 模块，75 用例：pi-agent 24 / hal-gateway 12 / rt-loop 12 / comm-center 15 / extension-bridge 12）
-   - SKILL frontmatter 断言（examples/skills 与 overlay 一致，6 个，安全分级 L1~L3）
-   - mock 端到端（hal-gateway 白名单直调 / extension-bridge tools/list）
-3. **Pi Agent 验证**：
-   - 单元测试：`cd src/pi-agent && cargo test`（24 用例）
-   - 端到端：mock OpenAI 兼容端点 + `pi-agent --once`（SKILL 加载 → LLM 决策 → 输出）
-   - 镜像内验证：QEMU 启动 → `systemctl is-active pi-agent` = active
-4. **镜像构建**：`./packaging/build.sh build`（BR2_EXTERNAL 已接入 5 个自研包）
-5. **文档一致性**：任何修改完成后 grep 核验
+2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.7 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
+3. **构建 / 仿真脚本**：`scripts/kernel-build/` 按任务文档 `docs/kernel-build-任务.md` 交付并自检（savedefconfig 合并通过 + 构建产出 Image）
+4. **文档一致性**：任何修改完成后 grep 核验
    - 不出现 `详见 / 参见 / 见 docs / 见设计文档 / 见 .poc` 等外指
    - Mermaid 图无 `style` / `classDef` / Emoji
    - 命名符合「命名 + 术语定义」
    - 文档中明说目标硬件（RK3588 同级别）、基座（Buildroot）、烧录（dd + OTA）、仿真（QEMU）
+5. **镜像构建**：`./scripts/kernel-build/build-kernel.sh ci|e2e`（依赖 Linux 6.6 源码固定 commit + ccache）
 6. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
 
-### 模块验证明细（M3 落地）
+### 内核对齐（规划）
 
-- **hal-gateway**（Linux Core）：白名单校验（工具 + 参数）、审计日志追加、mock 驱动、文件协议服务（serve / call）
-- **rt-loop**（Linux Core）：10~100Hz 周期、模式→执行器映射、紧急模式立即生效、决策缺失降级 idle
-- **comm-center**（接入位·中台调度通信）：远程链路（SSE/WS/MQTT）+ 本地 Mesh（UDP）、双链路故障切换（阈值 3 次）、消息路由（builtin:report / script:<cmd>）
-- **extension-bridge**（接入位·Extension·MCP）：JSON-RPC 2.0（initialize / tools/list / tools/call）、工具白名单 + 参数白名单 + shell 转义
-- **pi-agent 剩余**：SKILL 签名校验（HMAC-SHA256，密钥走环境变量）、Hooks（before/after）、Extension 工具加载
-- **构建集成**：5 个 Buildroot 包 + systemd 沙箱（NoNewPrivileges / CapabilityBoundingSet / PrivateDevices / RestrictAddressFamilies）、四层隔离栈模板（/etc/taihao-os/security/）、固件三分区 + A/B OTA 脚本骨架
-- **核心安全准则回归**：LLM 不下场实时控制（rt-loop 独立 10~100Hz）+ 不绕过 HAL 网关（白名单 + 审计）——代码级测试覆盖
-- **QEMU 全链路验证（强制）**：镜像内 systemd Ready + 5 服务 active + 接入位加载；amd64 + aarch64 均要跑通（镜像重建耗时，默认由用户触发）
+- **镜像内核裁剪与封装**：按 `docs/linux-内核裁剪方案.md` v0.0.7 完成内核裁剪 + 构建 / 仿真封装（`scripts/kernel-build/`），产出可启动镜像
+- **仿真验证**：QEMU 启动 → 镜像内 systemd Ready；amd64 + aarch64 均要跑通
 
 ## 一致性核验
 
@@ -209,3 +204,5 @@ taihao/
 | 仓库初始化（终态） | 太昊定位为「智能终端 / 机器人设备端 OS」；README + AGENTS 一次性大重写到终态（移除「起点 / 终点」废话与「太昊 = 构建系统」误读）；重写 git 历史为单 commit | 仓库根 |
 | 2026-08-01 | Pi Agent M2 落地（Rust）：Agent Loop / SKILL Registry / Provider（OpenAI 兼容远端端点）；BR2_EXTERNAL 接入自研 cargo 包 + systemd unit 开机自启 + SKILL overlay；QEMU 验证通过；SOP 当前阶段更新为「M2」 | src/pi-agent、packaging/buildroot |
 | 2026-08-03 | M3 全模块落地：① hal-gateway（白名单+审计+mock 驱动）② rt-loop（10~100Hz 实时回路）③ SKILL 集补齐 6 个（紧急避险/故障自愈/多机避障/分区协同/路径规划/感知融合）④ comm-center（SSE/WS/MQTT + Mesh UDP 双链路 + 故障切换 + 路由）⑤ extension-bridge（JSON-RPC + 白名单 + 权限边界）⑥ pi-agent 补 SKILL 签名校验/Hooks/Extension 加载 ⑦ Buildroot 5 包 + systemd 四层隔离栈沙箱 + 固件三分区/A-B OTA 脚本骨架 + verify.sh smoke；SOP 更新为「M3」 | src/*、packaging/buildroot、examples/skills、scripts |
+| 2026-08-07 | Buildroot 自研包重构启动：原 5 包（pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）及其 apparmor 模板移除，Config.in / taihao_defconfig 引用同步清理；SOP 当前阶段更新为「M3（构建集成重构中）」 | packaging/buildroot |
+| 2026-08-07 | 源码层整体重置：src/ 五模块、examples/、packaging/（Buildroot + 分区脚本）、scripts/verify.sh 全部移除；AGENTS.md 目录树 / SOP 更新为「构建集成批次」（仅按 linux-内核裁剪方案 v0.0.7 完成镜像内核裁剪与封装）；新建 docs/kernel-build-任务.md 下发构建 / 仿真脚本任务 + scripts/kernel-build/ 目录骨架 | 仓库根 |
