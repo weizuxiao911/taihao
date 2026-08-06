@@ -88,6 +88,19 @@
 - 不引用其他项目的命名（taichu / taixu / taiyee / taiyee-pptx-skill / taishi 等）
 - 不写"起点 / 终点"废话——OS 镜像是什么就是什么，不区分起始与目标形态
 
+## 终端架构认知（两层模型，仅作认知，未来实现时遵循）
+
+> 终端侧职责严格分层：认知决策与实时稳控分离，中间由执行层回路衔接。
+
+| 层 | 载体 | 职责 | 循环频率 | 边界 |
+| --- | --- | --- | --- | --- |
+| **认知决策层（大脑皮层）** | RK3588 同级别 + Pi-Agent + 4-7B 多模态模型 | 环境感知 / 任务理解 / Skill 符号编排 / 高层运动意图 | 1-10Hz（亚秒级迭代） | 只定"要干什么、要去哪里"，不碰底层实时微操；Skill 跑在 Linux 层，基于 MCU 硬件原子原语编排 |
+| **执行层回路（rt-loop）** | Linux 侧 | 接收 Agent 高层意图，生成轨迹 / 指令流下发 MCU，回收本体状态做闭环校调 | 10-100Hz | 指令下发与状态回收的衔接层，不承载认知与稳控 |
+| **稳控反射层（小脑 + 躯体反射）** | MCU 端控单元 | PID + 可选极小微模型（Pi0.5/0.6 类）；扰动补偿 / 姿态稳控 / 急停 | 毫秒-十毫秒级高速闭环 | 不看图像、不懂业务任务；微模型失效降级回传统 PID，接口不变，上层无感 |
+
+- **职责边界**：底层反射不评判高层目标合理性；业务逻辑与目标校验留给 Pi-Agent 框架。瞬时扰动底层消化，策略层面变更等待下一轮 Agent 推理周期
+- **推理抽象层**：采用 OpenAI 兼容协议抽象，隔离不同推理后端，支持多模型服务商接入与开放生态
+
 ## 目录职责 + 文件/路径含义
 
 仓库当前状态：
@@ -206,3 +219,5 @@ taihao/
 | 2026-08-03 | M3 全模块落地：① hal-gateway（白名单+审计+mock 驱动）② rt-loop（10~100Hz 实时回路）③ SKILL 集补齐 6 个（紧急避险/故障自愈/多机避障/分区协同/路径规划/感知融合）④ comm-center（SSE/WS/MQTT + Mesh UDP 双链路 + 故障切换 + 路由）⑤ extension-bridge（JSON-RPC + 白名单 + 权限边界）⑥ pi-agent 补 SKILL 签名校验/Hooks/Extension 加载 ⑦ Buildroot 5 包 + systemd 四层隔离栈沙箱 + 固件三分区/A-B OTA 脚本骨架 + verify.sh smoke；SOP 更新为「M3」 | src/*、packaging/buildroot、examples/skills、scripts |
 | 2026-08-07 | Buildroot 自研包重构启动：原 5 包（pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）及其 apparmor 模板移除，Config.in / taihao_defconfig 引用同步清理；SOP 当前阶段更新为「M3（构建集成重构中）」 | packaging/buildroot |
 | 2026-08-07 | 源码层整体重置：src/ 五模块、examples/、packaging/（Buildroot + 分区脚本）、scripts/verify.sh 全部移除；AGENTS.md 目录树 / SOP 更新为「构建集成批次」（仅按 linux-内核裁剪方案 v0.0.7 完成镜像内核裁剪与封装）；新建 docs/kernel-build-任务.md 下发构建 / 仿真脚本任务 + scripts/kernel-build/ 目录骨架 | 仓库根 |
+| 2026-08-07 | 新增「终端架构认知（两层模型）」：认知决策层（RK3588 + Pi-Agent + 4-7B）/ 执行层回路（rt-loop 10-100Hz）/ 稳控反射层（MCU）；同步撰写记录到 内核工作原理.html §十一 | AGENTS.md、内核工作原理.html |
+| 2026-08-07 | 内核工作原理.html 修订：§二 端到端服务清单对齐契约（5 服务：pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）、§十一 两层模型排版重构（三层卡片 + 职责边界 + 推理抽象层）；新建 docs/kernel-build-e2e-任务.md（端到端镜像构建与运行验证任务，e2e 验证批次） | 内核工作原理.html、docs/kernel-build-e2e-任务.md |
