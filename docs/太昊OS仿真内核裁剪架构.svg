@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 816" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <style>
+      .title { font-size: 26px; font-weight: 800; fill: #0f172a; letter-spacing: 2px; }
+      .layer-label { font-size: 12px; font-weight: 700; letter-spacing: 4px; text-anchor: middle; }
+      .node-title { font-size: 17px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .node-sub { font-size: 12px; fill: #475569; text-anchor: middle; }
+      .rk-title { font-size: 17px; font-weight: 800; fill: #0f172a; text-anchor: middle; }
+      .rk-sub { font-size: 11px; fill: #475569; text-anchor: middle; }
+    </style>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="816" fill="#fafafa"/>
+  <text x="720" y="70" text-anchor="middle" class="title">太昊OS仿真内核裁剪架构</text>
+
+  <!-- ===================== L1 用户态层 (y=126, h=120) 主题色 indigo #6366f1 ===================== -->
+  <rect x="240" y="126" width="960" height="120" rx="12" fill="#eef2ff" fill-opacity="0.6" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="720" y="148" class="layer-label" fill="#6366f1">用 户 态 层</text>
+  <g filter="url(#shadow)">
+    <rect x="250" y="156" width="300" height="60" rx="6" fill="#fff" stroke="#6366f1" stroke-width="2"/>
+    <rect x="250" y="156" width="6" height="60" rx="2" fill="#6366f1"/>
+    <text x="400" y="186" class="node-title">CI‑Smoke</text>
+    <text x="400" y="210" class="node-sub">systemd basic.target｜无业务服务｜ext4+tmpfs</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="890" y="156" width="300" height="60" rx="6" fill="#fff" stroke="#6366f1" stroke-width="2"/>
+    <rect x="890" y="156" width="6" height="60" rx="2" fill="#6366f1"/>
+    <text x="1040" y="186" class="node-title">E2E端到端</text>
+    <text x="1040" y="210" class="node-sub">pi‑agent 等 5 服务｜virtio‑9p 共享</text>
+  </g>
+
+  <!-- ===================== L2 Linux 内核层 (y=306, h=120) 主题色 pink #ec4899 ===================== -->
+  <rect x="240" y="306" width="960" height="120" rx="12" fill="#fce7f3" fill-opacity="0.6" stroke="#ec4899" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="720" y="328" class="layer-label" fill="#ec4899">Linux 6.6 LTS 内核层</text>
+  <g filter="url(#shadow)">
+    <rect x="270" y="336" width="260" height="60" rx="6" fill="#fff" stroke="#ec4899" stroke-width="2"/>
+    <rect x="270" y="336" width="6" height="60" rx="2" fill="#ec4899"/>
+    <text x="400" y="366" class="node-title">CI‑Smoke内核</text>
+    <text x="400" y="390" class="node-sub">MODULES=n｜裁9p/vsock/BPF/外设</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="590" y="336" width="260" height="60" rx="6" fill="#fff" stroke="#06b6d4" stroke-width="2"/>
+    <rect x="590" y="336" width="6" height="60" rx="2" fill="#06b6d4"/>
+    <text x="720" y="366" class="node-title">裁剪决策表【契约】</text>
+    <text x="720" y="390" class="node-sub">保留/CI裁/全裁/可选｜两套.config</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="910" y="336" width="260" height="60" rx="6" fill="#fff" stroke="#ec4899" stroke-width="2"/>
+    <rect x="910" y="336" width="6" height="60" rx="2" fill="#ec4899"/>
+    <text x="1040" y="366" class="node-title">E2E端到端内核</text>
+    <text x="1040" y="390" class="node-sub">MODULES=y｜恢复9p/vsock/BPF/外设</text>
+  </g>
+
+  <!-- ===================== L3 QEMU 虚拟化层 (y=486, h=120) 主题色 amber #f59e0b ===================== -->
+  <rect x="240" y="486" width="960" height="120" rx="12" fill="#fef3c7" fill-opacity="0.6" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="720" y="508" class="layer-label" fill="#f59e0b">QEMU 虚拟化层</text>
+  <g filter="url(#shadow)">
+    <rect x="270" y="516" width="260" height="60" rx="6" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="270" y="516" width="6" height="60" rx="2" fill="#f59e0b"/>
+    <text x="400" y="546" class="node-title">公共 virtio</text>
+    <text x="400" y="570" class="node-sub">blk｜net｜console｜rng</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="590" y="516" width="260" height="60" rx="6" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="590" y="516" width="6" height="60" rx="2" fill="#f59e0b"/>
+    <text x="720" y="546" class="node-title">savevm/loadvm 快照</text>
+    <text x="720" y="570" class="node-sub">内核变更必须重建快照</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="910" y="516" width="260" height="60" rx="6" fill="#fff" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="910" y="516" width="6" height="60" rx="2" fill="#f59e0b"/>
+    <text x="1040" y="546" class="node-title">E2E附加</text>
+    <text x="1040" y="570" class="node-sub">virtio‑9p｜virtio‑vsock</text>
+  </g>
+
+  <!-- ===================== L4 构建 & CI 流水线层 (y=666, h=120) 主题色 teal #14b8a6 ===================== -->
+  <rect x="240" y="666" width="960" height="120" rx="12" fill="#ccfbf1" fill-opacity="0.6" stroke="#14b8a6" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="720" y="688" class="layer-label" fill="#14b8a6">构 建 &amp; CI 流 水 线 层</text>
+  <g filter="url(#shadow)">
+    <rect x="390" y="696" width="300" height="60" rx="6" fill="#fff" stroke="#14b8a6" stroke-width="2"/>
+    <rect x="390" y="696" width="6" height="60" rx="2" fill="#14b8a6"/>
+    <text x="540" y="726" class="node-title">ccache 增量编译</text>
+    <text x="540" y="750" class="node-sub">冷构建&lt;3min｜增量&lt;30s</text>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="750" y="696" width="300" height="60" rx="6" fill="#fff" stroke="#14b8a6" stroke-width="2"/>
+    <rect x="750" y="696" width="6" height="60" rx="2" fill="#14b8a6"/>
+    <text x="900" y="726" class="node-title">GitLab‑CI</text>
+    <text x="900" y="750" class="node-sub">编译→QEMU启动→smoke→门禁</text>
+  </g>
+
+  <!-- ===================== RK3588 真机内核 独立框 (x=1215, y=571, w=204, h=130) 主题色 violet #8b5cf6 ===================== -->
+  <rect x="1215" y="571" width="204" height="130" rx="10" fill="#ede9fe" fill-opacity="0.5" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1317" y="591" class="rk-title">RK3588 真机内核</text>
+  <text x="1317" y="615" class="rk-sub">仅复用决策契约</text>
+  <text x="1317" y="635" class="rk-sub">DTS/驱动/.config 完全独立</text>
+  <text x="1317" y="655" class="rk-sub">仿真:PREEMPT_VOLUNTARY</text>
+  <text x="1317" y="675" class="rk-sub">真机可选 PREEMPT_RT</text>
+
+  <!-- ===================== 连线 (实线,框对框/节点级;RK 线为虚线) ===================== -->
+
+  <!-- L1 → L2: CI_USER(400,216) → CI_KERN(400,336) -->
+  <g stroke="#6366f1" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="400" y1="216" x2="400" y2="330"/>
+    <polyline points="394,330 400,336 406,330"/>
+  </g>
+
+  <!-- L1 → L2: E2E_USER(1040,216) → E2E_KERN(1040,336) -->
+  <g stroke="#6366f1" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="1040" y1="216" x2="1040" y2="330"/>
+    <polyline points="1034,330 1040,336 1046,330"/>
+  </g>
+
+  <!-- L2 层内: DECISION(590,366) → CI_KERN(530,366) 水平向左 -->
+  <g stroke="#06b6d4" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="590" y1="366" x2="536" y2="366"/>
+    <polyline points="536,360 530,366 536,372"/>
+  </g>
+
+  <!-- L2 层内: DECISION(850,366) → E2E_KERN(910,366) 水平向右 -->
+  <g stroke="#06b6d4" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="850" y1="366" x2="904" y2="366"/>
+    <polyline points="904,360 910,366 904,372"/>
+  </g>
+
+  <!-- L2 → L3: CI_KERN(400,396) → VIRTIO_COMMON(400,516) -->
+  <g stroke="#ec4899" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="400" y1="396" x2="400" y2="510"/>
+    <polyline points="394,510 400,516 406,510"/>
+  </g>
+
+  <!-- L2 → L3: E2E_KERN(1040,396) → VIRTIO_COMMON(400,516) 折线 mid_y=456 -->
+  <g stroke="#ec4899" stroke-width="2" stroke-linecap="round" fill="none">
+    <polyline points="1040,396 1040,456 400,456 400,510"/>
+    <polyline points="394,510 400,516 406,510"/>
+  </g>
+
+  <!-- L2 → L3: E2E_KERN(1040,396) → VIRTIO_E2E(1040,516) -->
+  <g stroke="#ec4899" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="1040" y1="396" x2="1040" y2="510"/>
+    <polyline points="1034,510 1040,516 1046,510"/>
+  </g>
+
+  <!-- L3 层内: VIRTIO_COMMON(530,546) → SNAP(590,546) 水平向右 -->
+  <g stroke="#f59e0b" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="530" y1="546" x2="584" y2="546"/>
+    <polyline points="584,540 590,546 584,552"/>
+  </g>
+
+  <!-- L3 层内: VIRTIO_E2E(910,546) → SNAP(850,546) 水平向左 -->
+  <g stroke="#f59e0b" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="910" y1="546" x2="856" y2="546"/>
+    <polyline points="856,540 850,546 856,552"/>
+  </g>
+
+  <!-- L2 → L4: CI_KERN(400,396) → BUILD(540,696) 直落(通道 x=560,经 L3 空隙) -->
+  <g stroke="#ec4899" stroke-width="2" stroke-linecap="round" fill="none">
+    <polyline points="400,396 400,456 560,456 560,690"/>
+    <polyline points="554,690 560,696 566,690"/>
+  </g>
+
+  <!-- L2 → L4: E2E_KERN(1040,396) → BUILD(540,696) 直落(通道 x=560) -->
+  <g stroke="#ec4899" stroke-width="2" stroke-linecap="round" fill="none">
+    <polyline points="1040,396 1040,456 560,456 560,690"/>
+    <polyline points="554,690 560,696 566,690"/>
+  </g>
+
+  <!-- L4 层内: BUILD(690,726) → GITLAB(750,726) 水平向右 -->
+  <g stroke="#14b8a6" stroke-width="2" stroke-linecap="round" fill="none">
+    <line x1="690" y1="726" x2="744" y2="726"/>
+    <polyline points="744,720 750,726 744,732"/>
+  </g>
+
+  <!-- DECISION(720,336) → RK(1317,571) 虚线折线 (复用契约) -->
+  <g stroke="#06b6d4" stroke-width="2" stroke-linecap="round" fill="none" stroke-dasharray="6 4">
+    <polyline points="720,336 720,276 1317,276 1317,565"/>
+    <polyline points="1311,565 1317,571 1323,565"/>
+  </g>
+
+</svg>
