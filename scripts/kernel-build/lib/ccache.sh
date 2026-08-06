@@ -46,11 +46,14 @@ ccache_configure() {
 }
 
 ccache_export() {
-    export CC="ccache gcc"
-    export CXX="ccache g++"
+    # 交叉编译场景:CC 必须含交叉前缀,否则 ccache 调用 host gcc
+    local cc="${CROSS_COMPILE:-}gcc"
+    local cxx="${CROSS_COMPILE:-}g++"
+    export CC="ccache ${cc}"
+    export CXX="ccache ${cxx}"
     export CCACHE_DIR
     export CCACHE_BASEDIR
-    info "已导出 CC=/CXX= 指向 ccache"
+    info "已导出 CC=$CC / CXX=$CXX"
 }
 
 ccache_reset() {
