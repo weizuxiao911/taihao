@@ -20,17 +20,22 @@
   <text x="772" y="108" class="box-label" fill="#60a5fa">产出</text>
 
   <!-- 连接箭头:输入 → 打包层 -->
-  <line x1="260" y1="152" x2="378" y2="152" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="260" y1="252" x2="378" y2="252" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
-  <line x1="260" y1="352" x2="378" y2="352" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="260" y1="152" x2="378" y2="152" stroke="#94a3b8" stroke-width="2"/>
+  <polyline points="372,144 380,152 372,160" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="260" y1="252" x2="378" y2="252" stroke="#94a3b8" stroke-width="2"/>
+  <polyline points="372,244 380,252 372,260" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="260" y1="352" x2="378" y2="352" stroke="#94a3b8" stroke-width="2"/>
+  <polyline points="372,344 380,352 372,360" fill="none" stroke="#94a3b8" stroke-width="2"/>
 
   <!-- 连接箭头:打包层 → 输出 -->
-  <line x1="690" y1="170" x2="778" y2="170" stroke="#f59e0b" stroke-width="2" marker-end="url(#arrow-amber)"/>
+  <line x1="690" y1="170" x2="778" y2="170" stroke="#f59e0b" stroke-width="2"/>
+  <polyline points="772,162 780,170 772,178" fill="none" stroke="#f59e0b" stroke-width="2"/>
   <text x="732" y="162" class="core-title" fill="#f59e0b">打包</text>
 
   <!-- 连接箭头:OS 镜像 → A/B OTA -->
-  <path d="M 900 284 L 900 222" fill="none" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
-  <text x="908" y="258" class="core-title" fill="#60a5fa">升级</text>
+  <path d="M 900 284 L 900 222" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  <polyline points="892,228 900,220 908,228" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  <text x="908" y="258" class="core-title" fill="#3b82f6">升级</text>
 
   <!-- ===== 输入组件(Col 1) ===== -->
   <!-- 内核 Image -->
