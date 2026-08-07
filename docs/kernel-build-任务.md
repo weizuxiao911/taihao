@@ -5,7 +5,7 @@
 ## 依据(唯一契约,不引用仓库外文件)
 
 - `<仓库根>/docs/linux-内核裁剪方案.md`(v0.0.7 定稿)
-- 重点章节:§2.3 迭代速度硬指标(冷构建 < 3 min / 增量 < 30 s / qemu 重启 < 2 s)、§2.4 配置分离、§4.3 savevm 快照、§6 关键 CONFIG
+- 重点章节:§2.3 迭代速度指标(冷构建 4~8 核区间 3~5 min / 增量 < 30 s / qemu 重启 < 2 s)、§2.4 配置分离、§4.3 savevm 快照、§6 关键 CONFIG
 - 已交付基线:`config/kernel/qemu-aarch64-{ci,e2e}.config` + `scripts/kconfig/merge_config.sh`
 
 ## 二、工程化目录结构(交付规格)
@@ -33,7 +33,7 @@ scripts/kernel-build/
 | 模块策略 | CI 时 `CONFIG_MODULES=n`;E2E 时 `CONFIG_MODULES=y` |
 | 产出 | `out/arm64-{ci,e2e}/Image` + 最小 `initramfs`(内置最小根) |
 | 缓存 | ccache 统一缓存目录;保留冷 / 增量构建命中率 |
-| 指标 | 构建秒级计时,冷构建 < 3 min / 增量 < 30 s;超限或失败即非零退出 |
+| 指标 | 构建秒级计时,冷构建区间 3~5 min(4~8 核,硬上限 10 min)/ 增量 < 30 s;超上限或失败即非零退出 |
 
 ### 3.2 qemu-start-ci.sh
 
@@ -57,7 +57,7 @@ scripts/kernel-build/
 ## 四、验收门槛(硬性)
 
 1. **可执行**:`build-kernel.sh ci|e2e` 参数校验齐全,错误输出到 stderr,非零退出
-2. **构建达标**:冷构建 < 3 min、增量 < 30 s(实测,ccache 命中)
+2. **构建达标**:冷构建区间 3~5 min(4~8 核,硬上限 10 min)、增量 < 30 s(实测,ccache 命中);冷构建按核数区间计,不再以 < 3 min 为阻断项
 3. **initramfs**:最小化,`busybox` + `systemd`(作为 pid 1),可进入 `basic.target`
 4. **CI 冒烟**:`qemu-start-ci.sh` 启动 → systemd `basic.target` 达成,脚本退出码 = 校验结果
 5. **E2E 调试**:9p 挂载 + 快照 save / load 循环可用;内核 / initramfs 更换后旧快照自动失效

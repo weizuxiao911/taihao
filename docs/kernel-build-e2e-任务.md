@@ -10,7 +10,7 @@
 | 章节 | 内容 | 本任务落点 |
 | --- | --- | --- |
 | §2.1 端到端内核 | 完整集成验证;跑 pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge 全套服务;通过标准 = 全部服务 systemd unit `active` | 服务集成验收(§4.4) |
-| §2.3 迭代速度硬指标 | 冷构建 < 3 min / 增量 < 30 s / qemu 重启 < 2 s | 指标实测(§4.5) |
+| §2.3 迭代速度硬指标 | 冷构建 4~8 核区间 3~5 min(硬上限 10 min)/ 增量 < 30 s / qemu 重启 < 2 s | 指标实测(§4.5) |
 | §4.3 savevm 快照 | 内核 / initramfs 替换后必须重新生成快照 | 快照失效检测(§4.3) |
 | §9 步骤 6 | 端到端集成验证:跑全套服务 | 服务集成验收(§4.4) |
 
@@ -77,7 +77,7 @@ guest 内 `systemctl is-active` 五个服务全部返回 `active`:
 
 | 指标 | 目标 | 记录位置 |
 | --- | --- | --- |
-| 冷构建 | < 3 min | `build.time`(cold) |
+| 冷构建 | 3~5 min(4~8 核,硬上限 10 min) | `build.time`(cold) |
 | 增量构建 | < 30 s | `build.time`(warm) |
 | qemu 快照重启 | < 2 s | serial 时间戳 / 手动测 |
 | 冒烟执行(CI 侧) | 10 s 内 | CI 已交付,不重复 |

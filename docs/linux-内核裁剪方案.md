@@ -2,6 +2,7 @@
 
 | 版本号 | 日期 | 变更摘要 | 修订来源 |
 | --- | --- | --- | --- |
+| v0.0.8 | 2026-08-07 | §2.3 冷构建口径放宽:Lima 4 核实测 263 s,由 < 3 min 改为 4~8 核区间 3~5 min + 硬上限 10 min,不再作阻断项 | 用户+AI |
 | v0.0.7 | 2026-08-07 | §9 步骤 1 对齐 §2.4 config 命名,采用架构后缀形式 | 用户+AI |
 | v0.0.6 | 2026-08-07 | §1 加 amd64 双架构声明 + 等价替换规则;§2.3 去模块缓存;§2.4 config 加架构后缀;io_uring 从 §5.4 移到 §5.6;§5.7 #47 拆 virtio-rng;§5.8 #53 串口理由改;§5.9 加 virtio-rng;整表重排 #1~#87 | 用户+AI |
 | v0.0.5 | 2026-08-07 | OTA 路径定 A/B 分区 bootloader 切换:§5.13/§6/§8 三处 kexec 表述统一 | 用户+AI |
@@ -55,10 +56,12 @@
 
 | 阶段 | 目标 | 技术手段 |
 | --- | --- | --- |
-| 冷构建 | < 3 min | ccache + 预下载源码 + 并行 make |
+| 冷构建 | 4~8 核区间 3~5 min,硬上限 10 min | ccache + 预下载源码 + 并行 make |
 | 增量构建 | < 30 s | ccache 命中 + kconfig 增量 |
 | qemu 重启 | < 2 s | qemu `savevm` 内存快照 + 直接 `loadvm` |
 | 主机目录热替换 | 即时 | virtio-9p / virtio-fs 共享 rootfs 上层(仅 E2E) |
+
+> 冷构建口径:Lima 4 核实测 ≈ 4.4 min(263 s),8 核 ≈ 3 min;不再以 < 3 min 为阻断项,改为**区间参考 + 硬上限 10 min**——超出 10 min 判构建异常,区间内按实际记录。
 
 ### 2.4 配置分离原则
 
@@ -385,7 +388,7 @@ sequenceDiagram
 
 1. 基于 `defconfig` 生成 `qemu-aarch64-ci.config`、`qemu-aarch64-e2e.config`、`qemu-x86_64-ci.config`、`qemu-x86_64-e2e.config`
 2. 按子系统裁剪决策表逐项 review,补齐缺失选项
-3. 跑一次冷构建验证 < 3 min 目标,设置 ccache 缓存目录
+3. 跑一次冷构建验证区间达标(4~8 核 3~5 min,硬上限 10 min),设置 ccache 缓存目录
 4. 启动 qemu + savevm `boot-snap`,验证 < 2 s 重启(**内核镜像替换后必须重新生成快照**,见 § 4.3)
 5. CI 冒烟脚本接入 gitlab-ci / github actions,验证 basic.target 验收
 6. 端到端集成验证:跑 pi-agent + hal-gateway + rt-loop + comm-center + extension-bridge 全套 systemd unit
