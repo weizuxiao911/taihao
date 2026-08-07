@@ -145,6 +145,17 @@ OTA 版本: 0.1.0
 
 ---
 
+## 4.5 产物时序澄清(评审修正)
+
+| 时间 | 产物 | 内容 |
+| --- | --- | --- |
+| 01:24 | rootfs.ext2 / rootfs.tar(旧) | ⚠️ 纯净 Buildroot(服务 install 尚未完成) |
+| 01:30 | 5 包 install 完成(multi-user.wants 补齐) | target/ 含服务 |
+| 01:38 | rootfs.ext2 / rootfs.tar(终态) | ✅ 5 binary + 5 unit + 5 wants + SKILL + default.target + taihao 用户 |
+| 02:21 | buildroot-qemu-serial.log(终态) | ✅ 5 服务 Started + Multi-User System |
+
+评审时检查到旧产物(rootfs.tar 01:24 纯净版)导致"报告与产物不符"误判;01:38 终态产物已含全部内容。最终 QEMU 日志已同步宿主 `out/buildroot-qemu-serial.log`(6126 字节,5 个 Started 佐证)。
+
 ## 5. 偏离与遗留
 
 | 偏离 | 说明 |

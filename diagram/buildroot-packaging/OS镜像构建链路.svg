@@ -34,6 +34,11 @@
 
   <!-- 连接箭头:OS 镜像 → A/B OTA -->
   <path d="M 900 284 L 900 222" fill="none" stroke="#3b82f6" stroke-width="2"/>
+  <!-- 连接箭头:构建 → A/B OTA(左缘中心) -->
+  <line x1="690" y1="334" x2="778" y2="334" stroke="#f59e0b" stroke-width="2"/>
+  <polyline points="772,326 780,334 772,342" fill="none" stroke="#f59e0b" stroke-width="2"/>
+  <text x="734" y="324" class="core-title" fill="#f59e0b">打包(升级)</text>
+
   <polyline points="892,228 900,220 908,228" fill="none" stroke="#3b82f6" stroke-width="2"/>
   <text x="908" y="258" class="core-title" fill="#3b82f6">升级</text>
 
