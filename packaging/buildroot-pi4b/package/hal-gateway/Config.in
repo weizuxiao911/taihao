@@ -1,0 +1,5 @@
+config BR2_PACKAGE_HAL_GATEWAY
+	bool "hal-gateway"
+	depends on BR2_PACKAGE_TAIHAO
+	help
+	  太昊 OS 服务层模块。
