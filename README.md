@@ -148,10 +148,10 @@ flowchart LR
 
 ## 构建 / 烧录 / 验证
 
-- **本地模块验证**：`./scripts/verify.sh smoke`（五模块 cargo test + SKILL frontmatter 断言 + mock 端到端，无需 QEMU）
-- **构建**：基座 Buildroot（用户态构建系统）+ Linux 6.6 LTS + PREEMPT_RT 内核；构建产物 = 智能 OS 镜像（amd64 / arm64）+ 签名 + SBOM + 溯源
-- **烧录**：dd to raw device（工厂产线）+ OTA（部署后远程升级，A/B 双系统分区 + 失败回滚；脚本骨架见 `packaging/partitions/`）
-- **仿真**：QEMU amd64 + aarch64 必须可启动（CI 强制）
+- **构建**：基座 Buildroot（用户态构建系统）+ Linux 6.6 LTS 裁剪内核；构建产物 = 智能 OS 镜像（arm64 仿真 / amd64 等价）+ 服务层（src/ 五模块）
+- **烧录**：dd to raw device（工厂产线）+ OTA（部署后远程升级，A/B 双系统分区 + 失败回滚；脚本骨架见 `scripts/partition/`）
+- **仿真**：QEMU aarch64 必须可启动（CI 强制），快照重启 < 2s
+- **服务层验收**：`systemctl is-active` 五服务全绿 + rt-loop 10-100Hz + 白名单 / 越权拒绝（见 `docs/kernel-services-验收报告.md`）
 - **许可证**：Apache-2.0
 
 ## 运行效果

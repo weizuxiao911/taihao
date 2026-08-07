@@ -112,12 +112,15 @@ taihao/
 ├── LICENSE            # Apache-2.0
 ├── .gitignore
 ├── assets/            # 效果图
-├── 工作原理.html      # 工作机制四页图（总体架构 / 运行机制 / 安全与数据 / 接入位速查）
+├── 上位SBC内核裁剪完整方案.html # 工作机制四页图（总体架构 / 运行机制 / 安全与数据 / 接入位速查）
 ├── config/kernel/     # 内核裁剪基线片段（qemu-aarch64-{ci,e2e}.config）
-├── docs/              # 设计文档（内核裁剪方案 v0.0.7 + kconfig 派生产物 + 任务文档）
+├── docs/              # 设计文档（内核裁剪方案 v0.0.8 + kconfig 派生产物 + 任务/验收文档）
+├── src/               # 服务层源码（pi-agent / rt-loop / hal-gateway / comm-center / extension-bridge + taihao-common + systemd + skills）
+├── packaging/         # Buildroot 基座（buildroot/ 配置；output/ 不入库）
 └── scripts/
     ├── kconfig/       # merge_config.sh（内核片段合并 / savedefconfig 验证）
-    └── kernel-build/  # 构建 / 仿真脚本（build-kernel.sh + qemu-start-{ci,e2e}.sh + lib）
+    ├── kernel-build/  # 构建 / 仿真脚本（build-kernel.sh + qemu-start-{ci,e2e}.sh + lib）
+    └── services/      # 服务层集成脚本（install.sh）
 ```
 
 未来新增目录 / 文件时的职责边界：
@@ -179,12 +182,12 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（服务层落地批次）
+### 当前阶段（基座 OS 落地批次）
 
-仓库状态：内核裁剪契约 v0.0.8（冷构建放宽为 4~8 核区间 3~5 min + 硬上限 10 min）+ `scripts/kernel-build/` 构建 / 仿真脚本全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）+ 验收报告交付；服务层（src/ 五模块 + systemd unit）按设计规格开发中。SOP：
+仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 开发中。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
-2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.7 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
+2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.8 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
 3. **构建 / 仿真脚本**：`scripts/kernel-build/` 按任务文档 `docs/kernel-build-任务.md` 交付并自检（savedefconfig 合并通过 + 构建产出 Image）
 4. **文档一致性**：任何修改完成后 grep 核验
    - 不出现 `详见 / 参见 / 见 docs / 见设计文档 / 见 .poc` 等外指
@@ -200,11 +203,6 @@ taihao/
    - 冒烟标准：镜像内 systemd `basic.target` 达成，退出码 0
    - 快照标准：`save-snap` / `load-snap` 循环成功，重启 < 2 s；镜像 / initramfs 更换 → 快照失效自动重建
 6. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
-
-### 内核对齐（规划）
-
-- **镜像内核裁剪与封装**：按 `docs/linux-内核裁剪方案.md` v0.0.7 完成内核裁剪 + 构建 / 仿真封装（`scripts/kernel-build/`），产出可启动镜像
-- **仿真验证**：QEMU 启动 → 镜像内 systemd Ready；amd64 + aarch64 均要跑通
 
 ## 一致性核验
 
@@ -233,3 +231,4 @@ taihao/
 | 2026-08-07 | 服务层落地批次启动：新建 docs/kernel-services-任务.md（按设计规格实现 src/ 五模块 + systemd unit + 端到端五位 active 验收）替代原回填口径任务；SOP 当前阶段更新为「服务层落地批次」 | docs/kernel-services-任务.md、AGENTS.md |
 | 2026-08-07 | 术语定案同步：①「中台调度通信模块」改名「调度通信中心」（英文 comm-center 不变，README / AGENTS / 任务文档同步）② Pi Agent 明确 AGENT 内核采用 `badlogic/pi-mono`（仅技术内核选型参考，不构成品牌词；OpenClaw 同上）③ SKILL.md 明确兼容 Anthropic Agent Skills 规范 | AGENTS.md、README.md、docs/kernel-services-任务.md、docs/kernel-build-e2e-任务.md |
 | 2026-08-07 | 服务层实测复核验收（按任务文档 §六/§九口径）：五服务 active / rt-loop 46.1Hz 实测 / hal 白名单拒绝 / ext 越权拒绝 / 快照 load 0s / CI 冒烟 7s(RC=0) 六条硬门槛全通过；taihao-check.sh 以 perl 探测 Unix socket + 8082 健康端点取代 curl;kernel-services-验收报告重写为实测终态（替代早期未实跑版本）；SOP 当前阶段保持不变（服务层落地批次验收通过） | docs/kernel-services-验收报告.md、src/systemd/taihao-check.sh、AGENTS.md |
+| 2026-08-07 | 基座 OS 落地批次启动：新建 docs/kernel-buildroot-任务.md（Buildroot 基座打包 + 分区 / A-B OTA 骨架，对齐内核契约 §2.1/§2.3/§8 + AGENTS 技术选型）；AGENTS 目录树补 packaging/ / src/ / scripts/services/、修正 HTML 文件名、SOP 当前阶段更新为「基座 OS 落地批次」 | docs/kernel-buildroot-任务.md、AGENTS.md |
