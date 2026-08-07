@@ -3,11 +3,42 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>太昊 OS — Linux 内核工作原理</title>
+<title>太昊 OS — 上位 SBC 内核裁剪完整方案</title>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
 <script>
   if (typeof mermaid !== "undefined") {
-    mermaid.initialize({ startOnLoad: true, theme: "default", securityLevel: "loose", flowchart: { htmlLabels: true } });
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      securityLevel: "loose",
+      flowchart: { htmlLabels: true },
+      themeVariables: {
+        background: "#16202e",
+        primaryColor: "#1b2738",
+        primaryTextColor: "#e6edf5",
+        primaryBorderColor: "#2a3a52",
+        secondaryColor: "#0f1520",
+        tertiaryColor: "#1b2738",
+        lineColor: "#9fb0c6",
+        textColor: "#e6edf5",
+        actorBkg: "#1b2738",
+        actorBorder: "#2a3a52",
+        actorTextColor: "#e6edf5",
+        actorLineColor: "#9fb0c6",
+        signalColor: "#9fb0c6",
+        signalTextColor: "#9fb0c6",
+        labelBoxBkgColor: "#1b2738",
+        labelBoxBorderColor: "#2a3a52",
+        labelTextColor: "#e6edf5",
+        loopTextColor: "#e6edf5",
+        noteBkgColor: "#1b2738",
+        noteTextColor: "#e6edf5",
+        noteBorderColor: "#2a3a52",
+        activationBkgColor: "#1b2738",
+        activationBorderColor: "#2a3a52",
+        sequenceNumberColor: "#e6edf5"
+      }
+    });
   }
 </script>
 <style>
@@ -52,7 +83,7 @@
   .note{background:var(--killbg); border:1px solid var(--kill); border-radius:10px; padding:12px 16px; color:var(--txt); font-size:13.5px;}
   .note b{color:var(--kill);}
   .ok{color:var(--keep); font-weight:600;} .warn{color:var(--cid); font-weight:600;}
-  .m2{display:grid; grid-template-columns:130px 1fr; border-top:1px solid var(--line); padding:8px 0; font-size:13.5px;}
+  .m2{display:grid; grid-template-columns:80px 1fr; column-gap:16px; border-top:1px solid var(--line); padding:5px 0; font-size:13.5px;}
   .m2:first-of-type{border-top:none;} .m2 .k{color:var(--dim); font-weight:600;}
   details{margin:6px 0;}
   summary{cursor:pointer; font-weight:600; color:var(--accent2); padding:6px 0;}
@@ -60,6 +91,17 @@
   .hero{background:linear-gradient(135deg,var(--panel) 0%,var(--panel2) 100%); border:1px solid var(--line); border-radius:16px; padding:28px 30px; margin-bottom:24px;}
   .hero .spec{display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; font-size:13px; color:var(--dim);}
   .hero .spec b{color:var(--txt); font-weight:600;}
+
+  .flow{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px;}
+  .fnode{background:var(--panel2); border:1px solid var(--line); border-radius:10px; padding:12px 14px; flex:1; min-width:120px; text-align:center;}
+  .fnode b{display:block; color:var(--accent2); font-size:14px;}
+  .fnode span{color:var(--dim); font-size:11.5px; display:block; margin-top:2px;}
+  .farr{color:var(--accent); font-weight:700; flex:0 0 auto;}
+  .timeline{position:relative; margin-left:8px; padding-left:22px; border-left:2px solid var(--line);}
+  .tl{position:relative; margin:0 0 16px; }
+  .tl::before{content:""; position:absolute; left:-27px; top:6px; width:10px; height:10px; border-radius:50%; background:var(--accent);}
+  .tl b{color:var(--accent2);} .tl span{color:var(--dim); font-size:13px; display:block; margin-top:2px;}
+  .kvans{font-family:"SF Mono",Consolas,monospace; font-size:13px;}
 
   /* ========== Mermaid 图表 ========== */
   .mermaid {
@@ -75,55 +117,128 @@
   .mermaid svg { max-width: 100%; height: auto; display: inline-block; }
 
   /* ========== 打印样式:章节不分页切割 + 严格适配 A4/B5 ========== */
-  /* 默认 A4 */
+  /* —— 打印轻量化:白底深字,保留暗色仅作强调 —— */
+  :root.print-tokens {
+    --bg:#ffffff; --panel:#ffffff; --panel2:#f6f7f9;
+    --line:#d8dde4; --txt:#1a1f2b; --dim:#5a6478;
+    --faint:#9aa3b2; --accent:#2b5fff; --accent2:#0f3fb8;
+    --keep:#1f7a35; --cid:#a05a00; --kill:#b8252a; --opt:#6e3fb5;
+    --keepbg:#eaf5ec; --cidbg:#fbf1e1; --killbg:#fbeae9; --optbg:#f1e8fb;
+  }
+  /* 默认 A4:边距四向均衡,页眉右上,页脚居中页码 */
   @page {
     size: A4 portrait;
-    margin: 16mm 14mm 18mm 14mm;
+    margin: 20mm 18mm 22mm 18mm;
+    @top-right {
+      content: "太昊 OS · 上位 SBC 内核裁剪完整方案";
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 8.5pt;
+      color: #9aa3b2;
+      letter-spacing: .5px;
+      vertical-align: bottom;
+      padding-bottom: 4mm;
+    }
+    @bottom-center {
+      content: "— " counter(page) " / " counter(pages) " —";
+      font-family: "SF Mono", Consolas, monospace;
+      font-size: 9pt;
+      color: #5a6478;
+    }
   }
+  /* 首页不显示页眉(留封面观感) */
   @page :first {
-    margin-top: 18mm;
+    margin-top: 24mm;
+    @top-right { content: ""; }
   }
-  /* B5(ISO 176×250mm)命名纸张:边距按比例收紧 */
+  /* B5(ISO 176×250mm)命名纸张 */
   @page b5 {
     size: B5 portrait;
-    margin: 13mm 11mm 15mm 11mm;
+    margin: 16mm 14mm 18mm 14mm;
+    @top-right { font-size: 8pt; padding-bottom: 3mm; }
+    @bottom-center { font-size: 8pt; }
   }
   @page b5:first {
-    margin-top: 14mm;
+    margin-top: 18mm;
   }
   /* 切换 B5:body 加 class="paper-b5" */
   .paper-b5 { page: b5; }
 
   @media print {
     html, body {
-      background: var(--bg);
-      color: var(--txt);
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+      background: #fff;
+      color: #1a1f2b;
+      -webkit-print-color-adjust: economy;
+      print-color-adjust: economy;
     }
-    body { padding-bottom: 0; font-size: 11pt; line-height: 1.5; }
+    body { padding-bottom: 0; font-size: 10pt; line-height: 1.45; font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, serif; }
     .wrap { max-width: none; padding: 0; }
+    h1, h2, h3, h4 { font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif; letter-spacing: 0; color: #0f1520; }
+    h1 { font-size: 20pt; margin-bottom: 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #1a1f2b; }
+    h2 { font-size: 13pt; margin-top: 10pt; padding: 0 0 3pt 8pt; border-left: 3pt solid #2b5fff; color: #0f1520; }
+    h3 { font-size: 11pt; color: #2b5fff; margin-top: 8pt; margin-bottom: 4pt; }
+    p, li, td, th { color: #1a1f2b; margin: 3pt 0; }
+    code { background: #f6f7f9; border-color: #d8dde4; color: #0f3fb8; font-size: 9.5pt; padding: 0 4px; border-radius: 3px; }
+    a { color: #2b5fff; text-decoration: none; }
+
+    /* 关键:打印时强制多列网格,避开屏幕 820px 媒体查询的塌缩 */
+    .g2, .g3 { grid-template-columns: revert !important; }
+    .g2 { grid-template-columns: repeat(2, 1fr) !important; }
+    .g3 { grid-template-columns: repeat(3, 1fr) !important; }
+    /* 缩小网格间隙 */
+    .grid { gap: 8pt !important; }
+
+    /* 容器背景翻白 */
+    .card, .kpi, .note, .hero, details, .mermaid {
+      background: #ffffff !important;
+      border: 1px solid #d8dde4 !important;
+      box-shadow: none !important;
+    }
+    /* 容器内边距收紧,提高打印密度 */
+    .card { padding: 8pt 10pt !important; margin: 6pt 0 !important; border-radius: 4pt !important; }
+    .hero { background: linear-gradient(135deg, #fafbfc 0%, #f1f4f8 100%) !important; border: 1px solid #d8dde4 !important; padding: 12pt 14pt !important; margin-bottom: 8pt !important; border-radius: 4pt !important; }
+    .hero h1 { margin-bottom: 4pt; }
+    .hero .sub { font-size: 9pt; }
+    .hero .spec { margin-top: 6pt; font-size: 9pt; gap: 12pt; }
+    .kpi { background: #f6f7f9 !important; padding: 8pt 6pt !important; border-radius: 4pt !important; }
+    .kpi .stat { font-size: 22pt !important; margin-bottom: 2pt; }
+    .kpi .lb { font-size: 9pt; line-height: 1.3; }
+    .note { background: #fbeae9 !important; border-color: #b8252a !important; color: #1a1f2b !important; padding: 6pt 10pt !important; margin: 5pt 0 !important; font-size: 9.5pt; line-height: 1.4; }
+    .note b { color: #b8252a; }
+    .fnode { background: #f6f7f9 !important; border-color: #d8dde4 !important; padding: 6pt 8pt !important; font-size: 9pt; min-width: 80pt; }
+    .fnode b { font-size: 10pt; }
+    .tag { background: #f6f7f9 !important; border-color: #d8dde4 !important; color: #5a6478 !important; padding: 0 5pt; font-size: 8pt; }
+    /* Mermaid 在白底上颜色适配 */
+    .mermaid { padding: 6pt 8pt !important; margin: 6pt 0 !important; border-radius: 4pt !important; }
+    .mermaid svg { max-height: 200pt; }
+
+    /* 表格 */
+    table { color: #1a1f2b; font-size: 9pt; margin: 4pt 0; }
+    th, td { padding: 3pt 6pt !important; border-color: #d8dde4 !important; }
+    th { background: #f1f4f8 !important; color: #0f1520 !important; }
+    tr:nth-child(even) td { background: #fafbfc !important; }
+    /* 键值对行收紧 */
+    .m2 { font-size: 9.5pt !important; padding: 2pt 0 !important; column-gap: 10pt !important; line-height: 1.35; }
+    /* 决策 pill / badge 打印色 */
+    .pill, .badge { font-weight: 600; }
+    .p-keep, .b-keep { background: #eaf5ec !important; color: #1f7a35 !important; border-color: #1f7a35 !important; }
+    .p-cid, .b-cid { background: #fbf1e1 !important; color: #a05a00 !important; border-color: #a05a00 !important; }
+    .p-kill, .b-kill { background: #fbeae9 !important; color: #b8252a !important; border-color: #b8252a !important; }
+    .p-opt, .b-opt { background: #f1e8fb !important; color: #6e3fb5 !important; border-color: #6e3fb5 !important; }
 
     /* Mermaid 图表整体不跨页 */
     .mermaid {
       break-inside: avoid;
       page-break-inside: avoid;
-      padding: 12px 14px;
     }
 
-    /* 每个二级标题章节另起一页 */
+    /* 章节不分页硬切:让浏览器按内容自然分页 */
     h2 {
-      break-before: page;
-      page-break-before: always;
       break-after: avoid;
       page-break-after: avoid;
-      margin-top: 0;
+      margin-top: 14pt;
     }
-    /* 但首个 h2 紧跟 hero,共用首页 */
-    h2:first-of-type {
-      break-before: auto;
-      page-break-before: avoid;
-    }
+    /* 首个 h2 紧跟 hero,不额外留白 */
+    h2:first-of-type { margin-top: 8pt; }
     /* 三级标题与紧随内容连排,不脱页 */
     h3, h4, summary {
       break-after: avoid;
@@ -160,30 +275,53 @@
     summary { color: var(--accent2); }
     ::-webkit-scrollbar { display: none; }
 
-    /* ===== B5 适配:版心更窄,字号 / 内边距 / 网格密度全面收紧 ===== */
+    /* Mermaid SVG 打印色:与白底搭配 */
+    .mermaid svg .actor rect,
+    .mermaid svg .actor polygon,
+    .mermaid svg .actor circle,
+    .mermaid svg .actor path { fill: #f6f7f9 !important; stroke: #5a6478 !important; }
+    .mermaid svg .actor tspan,
+    .mermaid svg text.actor { fill: #1a1f2b !important; }
+    .mermaid svg .messageText,
+    .mermaid svg .messageLine0,
+    .mermaid svg .messageLine1 { stroke: #5a6478 !important; fill: #5a6478 !important; }
+    .mermaid svg .note rect,
+    .mermaid svg .note path { fill: #fffbe6 !important; stroke: #a05a00 !important; }
+    .mermaid svg .noteText,
+    .mermaid svg .noteText tspan { fill: #1a1f2b !important; }
+    .mermaid svg .labelBox rect,
+    .mermaid svg .labelBox polygon { fill: #f6f7f9 !important; stroke: #5a6478 !important; }
+    .mermaid svg .labelText,
+    .mermaid svg .labelText tspan { fill: #1a1f2b !important; }
+    .mermaid svg .loopLine { stroke: #5a6478 !important; }
+    .mermaid svg .activation0 rect { fill: #f6f7f9 !important; stroke: #5a6478 !important; }
+    .mermaid svg .sequenceNumber { fill: #1a1f2b !important; }
+
+    /* ===== B5 适配:版心更窄,网格 g3→2 列,g2→1 列 ===== */
     .paper-b5 {
-      font-size: 10pt;
-      line-height: 1.45;
+      font-size: 9pt !important;
+      line-height: 1.4 !important;
     }
-    /* g3 降为 2 列,g2 降为 1 列,避免 B5 版心挤爆 */
-    .paper-b5 .g3 { grid-template-columns: repeat(2, 1fr); }
-    .paper-b5 .g2 { grid-template-columns: 1fr; }
-    /* 容器内边距压缩 */
-    .paper-b5 .card { padding: 12px 14px; }
-    .paper-b5 .hero { padding: 20px 22px; }
-    .paper-b5 .kpi { padding: 12px; }
-    .paper-b5 .mermaid { padding: 10px 12px; }
-    /* 表格字号收紧 */
-    .paper-b5 table { font-size: 11.5px; }
-    .paper-b5 th, .paper-b5 td { padding: 5px 8px; }
-    /* 标题梯度按比例缩小 */
-    .paper-b5 h1 { font-size: 24px; }
-    .paper-b5 h2 { font-size: 17px; margin: 32px 0 10px; padding-left: 10px; }
-    .paper-b5 h3 { font-size: 13.5px; margin: 16px 0 8px; }
-    /* KPI 数字 */
-    .paper-b5 .stat { font-size: 24px; }
-    /* 键值对行 */
-    .paper-b5 .m2 { font-size: 12px; padding: 6px 0; grid-template-columns: 110px 1fr; }
+    .paper-b5 .g3 { grid-template-columns: repeat(2, 1fr) !important; }
+    .paper-b5 .g2 { grid-template-columns: 1fr !important; }
+    .paper-b5 .grid { gap: 6pt !important; }
+    .paper-b5 h1 { font-size: 17pt !important; }
+    .paper-b5 h2 { font-size: 12pt !important; margin-top: 8pt !important; }
+    .paper-b5 h3 { font-size: 10pt !important; }
+    .paper-b5 .card { padding: 6pt 8pt !important; }
+    .paper-b5 .hero { padding: 8pt 10pt !important; }
+    .paper-b5 .hero .sub, .paper-b5 .hero .spec { font-size: 8pt !important; }
+    .paper-b5 .kpi { padding: 6pt 4pt !important; }
+    .paper-b5 .kpi .stat { font-size: 18pt !important; }
+    .paper-b5 .kpi .lb { font-size: 8pt !important; }
+    .paper-b5 .note { padding: 4pt 8pt !important; font-size: 8.5pt !important; }
+    .paper-b5 .mermaid { padding: 4pt 6pt !important; }
+    .paper-b5 .mermaid svg { max-height: 160pt; }
+    .paper-b5 table { font-size: 8pt !important; }
+    .paper-b5 th, .paper-b5 td { padding: 2pt 4pt !important; }
+    .paper-b5 .m2 { font-size: 8.5pt !important; padding: 1.5pt 0 !important; grid-template-columns: 60px 1fr !important; }
+    .paper-b5 .fnode { padding: 4pt 6pt !important; font-size: 8pt !important; min-width: 60pt; }
+    .paper-b5 .fnode b { font-size: 9pt !important; }
   }
 </style>
 </head>
@@ -191,7 +329,7 @@
 <div class="wrap">
 
   <div class="hero">
-    <h1>太昊 OS — Linux 内核工作原理</h1>
+    <h1>太昊 OS — 上位 SBC 内核裁剪完整方案</h1>
     <div class="sub">qemu-aarch64 仿真原型开发验证平台 · 依据 <code>docs/linux-内核裁剪方案.md</code> v0.0.7 · 决策表 87 项</div>
     <div class="spec">
       <span>内核 <b>Linux 6.6 LTS</b></span>
@@ -478,10 +616,14 @@
 
   <h2>六、快速迭代技术栈</h2>
   <div class="card">
-<pre class="mermaid">
-flowchart LR
-    A["<b>Linux 6.6 源码</b><br>固定 commit v6.6<br/>杜绝上游漂移"] --> B["<b>ccache</b><br>统一缓存<br/>命中加速"] --> C["<b>merge_config</b><br>defconfig + 裁剪片段"] --> D["<b>并行编译</b><br>增量 make"] --> E["<b>Image + DTB + initramfs</b><br>最小根"] --> F["<b>qemu 启动</b><br>savevm / loadvm"]
-</pre>
+    <div class="flow">
+      <div class="fnode"><b>Linux 6.6 源码</b><span>固定 commit v6.6 · 杜绝上游漂移</span></div><div class="farr">→</div>
+      <div class="fnode"><b>ccache</b><span>统一缓存 · 命中加速</span></div><div class="farr">→</div>
+      <div class="fnode"><b>merge_config</b><span>defconfig + 裁剪片段</span></div><div class="farr">→</div>
+      <div class="fnode"><b>并行编译</b><span>增量 make</span></div><div class="farr">→</div>
+      <div class="fnode"><b>Image + DTB + initramfs</b><span>最小根</span></div><div class="farr">→</div>
+      <div class="fnode"><b>qemu 启动</b><span>savevm / loadvm</span></div>
+    </div>
     <table style="margin-top:14px">
       <tr><th>流程环节</th><th>落地脚本</th><th>说明</th></tr>
       <tr><td>源码拉取 + 锁定 commit</td><td><code>build-kernel.sh ci|e2e</code></td><td>自动 clone Linux 6.6 并 checkout 锁定 commit(v6.6)</td></tr>
@@ -499,20 +641,34 @@ flowchart LR
 
   <h2>七、qemu 快照策略</h2>
   <div class="card">
-<pre class="mermaid">
-flowchart TD
-    S0["<b>0 · 状态盘承载</b><br>savevm/loadvm 需要可写块设备落盘<br>out/arm64-e2e/snap/boot-snap.qcow2<br/>与 rootfs 无关"] --> S1["<b>1 · 首次冷启动</b><br>保存 vmstate + memory<br/>标记 boot-snap<br/>qemu-start-e2e.sh --save-snap"] --> S2["<b>2 · 增量迭代</b><br>ccache 命中 → 替换内核镜像<br/>→ loadvm boot-snap 快速重启"] --> S3["<b>3 · 快速回退</b><br>loadvm boot-snap 立即回退<br/>无需重新初始化"] --> S4["<b>4 · 失效判定</b><br>Image / initramfs / 状态盘<br/>三路 sha256 比对<br/>变更 → 强制失效<br/>qemu-start-e2e.sh reset-snap"]
-</pre>
+    <div class="timeline">
+      <div class="tl"><b>0 · 状态盘承载</b><span>savevm / loadvm 需要可写块设备落盘。e2e 构建阶段产出 <code>out/arm64-e2e/snap/boot-snap.qcow2</code>(256M 状态盘),qemu 挂 <code>-drive file=...,if=virtio,format=qcow2</code>,快照写入该盘,与 rootfs 无关</span></div>
+      <div class="tl"><b>1 · 首次冷启动</b><span>保存 vmstate + memory 到状态盘,标记为 <code>boot-snap</code>;命令:<code>qemu-start-e2e.sh --save-snap</code>(或 <code>save-snap</code> 子命令)</span></div>
+      <div class="tl"><b>2 · 增量迭代</b><span>ccache 命中 → 增量编译 → 替换内核镜像 → <code>loadvm boot-snap</code> 快速重启;启动脚本自动判定快照有效性后加载</span></div>
+      <div class="tl"><b>3 · 快速回退</b><span>验证失败 → <code>loadvm boot-snap</code> 立即回退,无需重新初始化;命令:<code>qemu-start-e2e.sh load-snap</code></span></div>
+      <div class="tl"><b>4 · 失效判定</b><span>Image / initramfs / 状态盘三路 sha256 哈希比对;任一变更 → 旧快照<b style="color:var(--kill)">强制失效</b>;删除状态盘重新冷启,命令:<code>qemu-start-e2e.sh reset-snap</code></span></div>
+    </div>
     <div class="note"><b>关键约束：</b><code>loadvm</code> 不能切换内核镜像。内核内存镜像与磁盘镜像不一致会引发不可复现异常。</div>
   </div>
 
   <h2>八、CI 冒烟启动时序</h2>
-  <div class="card kv">
-    <code>qemu-start-ci.sh</code> ──启动 qemu-system-aarch64──▶ qemu-aarch64(CI 不挂 9p / virtio-fs)<br>
-    qemu ──boot──▶ kernel<br>
-    kernel ──启动 pid 1──▶ systemd<br>
-    systemd ──加载 unit + mount tmpfs/sysfs/proc/devtmpfs──▶ basic.target<br>
-    probe_basic_target 串口日志正则命中 <code>basic.target</code> ──▶ 退出码 0
+  <div class="card">
+<pre class="mermaid">
+sequenceDiagram
+    participant S as qemu-start-ci.sh
+    participant Q as qemu-system-aarch64
+    participant K as kernel
+    participant D as systemd(pid 1)
+    participant P as probe_basic_target
+    S->>Q: 启动(不挂 9p / virtio-fs)
+    Q->>K: boot
+    K->>D: 启动 pid 1
+    D->>D: 加载 unit + mount tmpfs / sysfs / proc / devtmpfs
+    D-->>Q: 抵达 basic.target
+    Q->>P: 串口日志
+    P->>P: 正则命中 basic.target
+    P-->>S: 退出码 0
+</pre>
   </div>
 
   <h2>九、通过判据与超时</h2>
@@ -552,26 +708,29 @@ flowchart TD
   </div>
 
   <h2>十一、终端架构认知</h2>
-<pre class="mermaid">
-flowchart TB
-    subgraph L1["认知决策层 · 大脑皮层 · 1-10Hz"]
-        L1A["<b>载体</b> · RK3588 + Pi-Agent + 4-7B 多模态模型"]
-        L1B["<b>职责</b> · 环境感知 / 任务理解 / Skill 符号编排 / 高层运动意图"]
-        L1C["<b>边界</b> · 只定要干什么、要去哪里;Skill 跑在 Linux 层"]
-    end
-    subgraph L2["执行层回路 · rt-loop · 10-100Hz"]
-        L2A["<b>载体</b> · Linux 侧"]
-        L2B["<b>职责</b> · 接收意图 · 生成轨迹 · 下发 MCU · 回收状态"]
-        L2C["<b>边界</b> · 指令下发与状态回收的衔接层"]
-    end
-    subgraph L3["稳控反射层 · 小脑 + 躯体反射 · 毫秒-十毫秒级"]
-        L3A["<b>载体</b> · MCU 端控单元"]
-        L3B["<b>职责</b> · PID + 可选极小微模型 · 扰动补偿 · 姿态稳控 · 急停"]
-        L3C["<b>边界</b> · 不看图像、不懂业务 · 微模型失效降级回 PID"]
-    end
-    L1 --> L2
-    L2 --> L3
-</pre>
+  <div class="grid g3">
+    <div class="card">
+      <h3>认知决策层 · 大脑皮层</h3>
+      <div class="m2"><div class="k">载体</div><div>RK3588 同级别 + Pi-Agent + 4-7B 多模态模型</div></div>
+      <div class="m2"><div class="k">职责</div><div>环境感知 / 任务理解 / Skill 符号编排 / 高层运动意图</div></div>
+      <div class="m2"><div class="k">频率</div><div>1-10Hz 亚秒级迭代</div></div>
+      <div class="m2"><div class="k">边界</div><div>只定"要干什么、要去哪里",不碰底层实时微操;Skill 跑在 Linux 层,基于 MCU 硬件原子原语编排</div></div>
+    </div>
+    <div class="card">
+      <h3>执行层回路 · rt-loop</h3>
+      <div class="m2"><div class="k">载体</div><div>Linux 侧</div></div>
+      <div class="m2"><div class="k">职责</div><div>接收 Agent 高层意图,生成轨迹 / 指令流下发 MCU,回收本体状态做闭环校调</div></div>
+      <div class="m2"><div class="k">频率</div><div>10-100Hz</div></div>
+      <div class="m2"><div class="k">边界</div><div>指令下发与状态回收的衔接层,不承载认知与稳控</div></div>
+    </div>
+    <div class="card">
+      <h3>稳控反射层 · 小脑 + 躯体反射</h3>
+      <div class="m2"><div class="k">载体</div><div>MCU 端控单元</div></div>
+      <div class="m2"><div class="k">职责</div><div>PID + 可选极小微模型(Pi0.5/0.6 类);扰动补偿 / 姿态稳控 / 急停</div></div>
+      <div class="m2"><div class="k">频率</div><div>毫秒-十毫秒级高速闭环</div></div>
+      <div class="m2"><div class="k">边界</div><div>不看图像、不懂业务任务;微模型失效降级回传统 PID,接口不变,上层无感</div></div>
+    </div>
+  </div>
   <div class="card">
     <div class="m2"><div class="k">职责边界</div><div>底层反射不评判高层目标合理性;业务逻辑与目标校验留给 Pi-Agent 框架;瞬时扰动底层消化,策略变更等待下一轮 Agent 推理周期</div></div>
     <div class="m2"><div class="k">推理抽象层</div><div>OpenAI 兼容协议抽象,隔离推理后端,支持多模型服务商接入与开放生态</div></div>
