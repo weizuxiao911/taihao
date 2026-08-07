@@ -11,7 +11,7 @@
 - `<仓库根>/AGENTS.md`:
   - §「终端架构认知(两层模型)」:认知决策层(RK3588 + Pi-Agent + 4-7B,1-10Hz)/ 执行层回路(rt-loop,10-100Hz)/ 稳控反射层(MCU,PID)
   - §「开放接入位四槽」:HAL 集 / SKILL 集 / Provider 集 / Extension·MCP 桥
-  - §「中台调度通信模块」:调度 + 通信,厂商配置决定对接对象,OS 出厂不预设
+  - §「调度通信中心」:调度 + 通信,厂商配置决定对接对象,OS 出厂不预设
   - §「推理抽象层」:OpenAI 兼容协议抽象,隔离推理后端
 - `<仓库根>/docs/linux-内核裁剪方案.md` v0.0.8:§2.1 端到端通过标准
 - `<仓库根>/docs/kernel-build-e2e-任务.md`:§4.4 服务集成验收流程
@@ -20,10 +20,15 @@
 
 ### 3.1 pi-agent —— 认知决策层载体
 
+> 命名辨析:「pi-agent」市面重名多,本任务特指**太昊 OS 的认知决策层服务**(仓库 `src/pi-agent`)。AGENT 内核采用 `badlogic/pi-mono`(作者 Mario Zechner 的 monorepo,`pi-ai` / `pi-agent-core` / `pi-coding-agent` / `pi-tui` 分层;OpenClaw 在其上扩展网关 / 多端 / 记忆)。`pi-mono` 与 OpenClaw 仅作技术内核选型参考,不构成品牌词:
+>
+> - Pi Agent 内核(上游):<https://github.com/badlogic/pi-mono>
+> - OpenClaw(基于 Pi Agent 的产品):<https://github.com/openclaw/openclaw>
+
 - Agent Loop:感知 → 理解 → 决策 → 动作的符号编排循环,1-10Hz 亚秒级迭代
-- SKILL Registry:`SKILL.md` 注册 / 加载 / 签名校验(只执行白名单签名 skill)
-- Provider:OpenAI 兼容远端端点;通过「推理抽象层」隔离后端
-- Hooks:决策前后的扩展点;Extension 加载(经 extension-bridge 接入)
+- SKILL Registry:`SKILL.md` 注册 / 加载 / 签名校验(只执行白名单签名 skill);格式兼容 Anthropic Agent Skills 规范
+- Provider:OpenAI 兼容远端端点;通过「推理抽象层」隔离后端(参考 pi-ai 多 Provider 抽象)
+- Hooks:决策前后的扩展点;Extension 加载(经 extension-bridge 接入;参考 pi-mono 的 extensions / skills 扩展机制)
 - 边界:只定"要干什么、要去哪里",不下发底层实时微操;Skill 基于 MCU 硬件原子原语编排,由 rt-loop 执行
 
 ### 3.2 rt-loop —— 执行层回路
@@ -38,7 +43,7 @@
 - 审计:全量访问日志;mock 驱动:仿真环境无真硬件时行为可测
 - 请求源自 agent 决策(pi-agent / skill 协同链中)
 
-### 3.4 comm-center —— 中台调度通信模块
+### 3.4 comm-center —— 调度通信中心
 
 - 通信:协议适配;SSE / WS / MQTT + Mesh UDP 双链路
 - 调度:任务编排、消息路由、双链路选择、故障切换

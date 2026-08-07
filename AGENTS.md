@@ -63,7 +63,7 @@
 | 术语 | 含义 |
 | --- | --- |
 | **Linux Core** | OS 底座层；裁剪内核 + 四层隔离栈 + HAL 网关 + 高频实时回路 + 三分区 |
-| **Pi Agent** | 唯一智能决策层；Agent Loop / Skill Registry / Extension / Hooks |
+| **Pi Agent** | 唯一智能决策层；Agent Loop / Skill Registry / Extension / Hooks；AGENT 内核采用 `badlogic/pi-mono`（仅技术内核选型参考，不构成品牌词） |
 | **开放接入位** | 垂直差异承载位；四槽见下 |
 
 ### 开放接入位四槽
@@ -71,11 +71,11 @@
 | 槽 | 承载内容 |
 | --- | --- |
 | **HAL 集** | 硬件驱动（spidev / i2c-dev / V4L2 / SocketCAN / pwmchip / serial / 水声通信机 / …） |
-| **SKILL 集** | 策略 / 任务 / 自治能力 SKILL.md 包 |
-| **Provider 集** | 模型 / 工具 / 中台调度通信模块的 Provider；任意 OpenAI 兼容端点 |
+| **SKILL 集** | 策略 / 任务 / 自治能力 SKILL.md 包；SKILL.md 格式兼容 Anthropic Agent Skills 规范 |
+| **Provider 集** | 模型 / 工具 / 调度通信中心的 Provider；任意 OpenAI 兼容端点 |
 | **Extension·MCP 桥** | 扩展与 MCP 桥接，接入自研边缘能力 |
 
-### 中台调度通信模块
+### 调度通信中心（comm-center）
 
 - 位置：Pi Agent 与外部系统之间，作为接入位实现
 - 职责：调度（任务编排、消息路由、双链路选择、故障切换）+ 通信（协议适配）
@@ -83,7 +83,7 @@
 
 ### 不使用 / 不绑定的词
 
-- 不把"对接岸基控制系统"作为品牌特征写入文档——这只是中台调度通信模块的一个 Provider 实例
+- 不把"对接岸基控制系统"作为品牌特征写入文档——这只是调度通信中心的一个 Provider 实例
 - 不绑定具体终端形态
 - 不引用其他项目的命名（taichu / taixu / taiyee / taiyee-pptx-skill / taishi 等）
 - 不写"起点 / 终点"废话——OS 镜像是什么就是什么，不区分起始与目标形态
@@ -122,7 +122,7 @@ taihao/
 
 未来新增目录 / 文件时的职责边界：
 
-- 太昊 OS 源码进 `src/`（Pi Agent runtime / HAL gateway / 接入位接口 / 中台调度通信模块）
+- 太昊 OS 源码进 `src/`（Pi Agent runtime / HAL gateway / 接入位接口 / 调度通信中心）
 - Buildroot 配置进 `packaging/buildroot/`（overlays / configs / package recipes）
 - 构建产物 `packaging/output/` 不入库（已在 .gitignore 排除 `*.img` / `*.iso`）
 - 运行时路径（仅作认知，未来实现时遵循）：
@@ -231,3 +231,4 @@ taihao/
 | 2026-08-07 | 技术路径定案：QEMU 系构建路径（Lima ARM64 Linux VM 内构建 + 宿主 QEMU 启动验证），明确不用 Docker / 容器化；工具栈 Lima 升为「采用」；SOP「镜像构建」步骤细化（VM 依赖安装 + build-kernel.sh + 产物同步 + 冒烟/快照标准） | AGENTS.md |
 | 2026-08-07 | 达标实测 + 口径修订：scripts/kernel-build 全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s / rootfs busybox+systemd pid1）；启用未提交二次返修（ccache 4.x 兼容、snapshot hash 去 state、probe ANSI、qemu -display none 等）为交付态；契约 §2.3 冷构建口径放宽为「4~8 核区间 3~5 min + 硬上限 10 min」（Lima 4 核实测 263 s） | docs/linux-内核裁剪方案.md、docs/kernel-build-任务.md、docs/kernel-build-e2e-任务.md |
 | 2026-08-07 | 服务层落地批次启动：新建 docs/kernel-services-任务.md（按设计规格实现 src/ 五模块 + systemd unit + 端到端五位 active 验收）替代原回填口径任务；SOP 当前阶段更新为「服务层落地批次」 | docs/kernel-services-任务.md、AGENTS.md |
+| 2026-08-07 | 术语定案同步：①「中台调度通信模块」改名「调度通信中心」（英文 comm-center 不变，README / AGENTS / 任务文档同步）② Pi Agent 明确 AGENT 内核采用 `badlogic/pi-mono`（仅技术内核选型参考，不构成品牌词；OpenClaw 同上）③ SKILL.md 明确兼容 Anthropic Agent Skills 规范 | AGENTS.md、README.md、docs/kernel-services-任务.md、docs/kernel-build-e2e-任务.md |

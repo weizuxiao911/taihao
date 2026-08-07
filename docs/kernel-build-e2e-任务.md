@@ -68,7 +68,7 @@ guest 内 `systemctl is-active` 五个服务全部返回 `active`:
 | pi-agent | 智能决策层(Agent Loop / SKILL) |
 | hal-gateway | 硬件访问网关(HAL 白名单 + 审计) |
 | rt-loop | 执行层回路(10-100 Hz 指令流下发 / 状态回收) |
-| comm-center | 中台调度通信(多链路 + 故障切换 + 路由) |
+| comm-center | 调度通信中心(多链路 + 故障切换 + 路由) |
 | extension-bridge | 扩展 / MCP 桥(JSON-RPC + 白名单) |
 
 > e2e kernel 保留了接入位全部子系统;任一服务 unit 非 active 或启动失败 = 本任务失败。

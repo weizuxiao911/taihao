@@ -14,7 +14,7 @@
 
 ## 核心能力
 
-1. **网联对接**：上电激活后与外部控制侧建立远程连接，接收任务、回传执行结果。由中台调度通信模块承载，对接对象（岸基 / 云 / 邻域）由厂商配置决定。
+1. **网联对接**：上电激活后与外部控制侧建立远程连接，接收任务、回传执行结果。由调度通信中心承载，对接对象（岸基 / 云 / 邻域）由厂商配置决定。
 2. **自主组网**：上电后依据配置完成 Mesh 域组网，与同区域设备自动 AP 组网，支撑智能集群工作模式。
 3. **任务执行**：依据任务参数完成路径规划、运动控制、感知融合、执行反馈。
 4. **边缘自治**：作业过程中自主执行四类本地决策：
@@ -33,7 +33,7 @@ flowchart TB
     EXT["外部世界<br/>岸基 / 云 / 邻域 / 调试终端"]
 
     subgraph ACC["开放接入位"]
-        CM["中台调度通信模块<br/>调度 + 通信"]
+        CM["调度通信中心<br/>调度 + 通信"]
         SLOT["HAL 集 / SKILL 集<br/>Provider 集 / Extension·MCP 桥"]
     end
 
@@ -58,17 +58,17 @@ flowchart TB
 | 段 | 角色 | 实现 |
 | --- | --- | --- |
 | **Linux Core** | OS 底座 | 裁剪内核 + 四层隔离栈（iptables / namespaces / seccomp+eBPF / AppArmor）+ HAL 网关 + C/Rust 高频实时回路（10~100Hz）+ 固件三分区 |
-| **Pi Agent** | 唯一智能决策层 | Agent Loop / Skill Registry / Extension / Hooks / AGENTS.md / SYSTEM.md；受限 namespace、无 capabilities；仅以 ≤1Hz 下发目标与模式 |
+| **Pi Agent** | 唯一智能决策层 | Agent Loop / Skill Registry / Extension / Hooks / AGENTS.md / SYSTEM.md；AGENT 内核采用 `badlogic/pi-mono`（仅技术内核选型参考，不构成品牌词）；受限 namespace、无 capabilities；仅以 ≤1Hz 下发目标与模式 |
 | **开放接入位** | 垂直差异承载位 | HAL 集 + SKILL 集 + Provider 集 + Extension·MCP 桥；厂商可写业务分区 |
 
 ### 开放接入位四槽
 
 - **HAL 集**：硬件驱动接入点（spidev / i2c-dev / V4L2 / SocketCAN / pwmchip / serial / 水声通信机 / …）
-- **SKILL 集**：策略 / 任务 / 自治能力 SKILL.md 包（紧急避险 / 故障自愈 / 多机避障 / 分区协同 / 路径规划 / 感知融合 / …）
-- **Provider 集**：模型 / 工具 / 中台调度通信模块的 Provider 注册；任意 OpenAI 兼容端点 + 自定义协议
+- **SKILL 集**：策略 / 任务 / 自治能力 SKILL.md 包（紧急避险 / 故障自愈 / 多机避障 / 分区协同 / 路径规划 / 感知融合 / …）；SKILL.md 格式兼容 Anthropic Agent Skills 规范
+- **Provider 集**：模型 / 工具 / 调度通信中心的 Provider 注册；任意 OpenAI 兼容端点 + 自定义协议
 - **Extension·MCP 桥**：扩展与 MCP 桥接，接入自研边缘能力
 
-### 中台调度通信模块
+### 调度通信中心
 
 - **位置**：位于 Pi Agent 与外部系统之间，**作为接入位实现**，不出现在 OS Core 或 Agent Loop
 - **职责**：
