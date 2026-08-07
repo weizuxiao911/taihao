@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>太昊 OS — Linux 内核工作原理说明书</title>
+<title>太昊 OS — Linux 内核工作原理</title>
 <style>
   :root{
     --bg:#0f1520; --panel:#16202e; --panel2:#1b2738; --line:#2a3a52;
@@ -64,18 +64,127 @@
   .tl::before{content:""; position:absolute; left:-27px; top:6px; width:10px; height:10px; border-radius:50%; background:var(--accent);}
   .tl b{color:var(--accent2);} .tl span{color:var(--dim); font-size:13px; display:block; margin-top:2px;}
   .kvans{font-family:"SF Mono",Consolas,monospace; font-size:13px;}
+
+  /* ========== 打印样式:章节不分页切割 + 严格适配 A4/B5 ========== */
+  /* 默认 A4 */
+  @page {
+    size: A4 portrait;
+    margin: 16mm 14mm 18mm 14mm;
+  }
+  @page :first {
+    margin-top: 18mm;
+  }
+  /* B5(ISO 176×250mm)命名纸张:边距按比例收紧 */
+  @page b5 {
+    size: B5 portrait;
+    margin: 13mm 11mm 15mm 11mm;
+  }
+  @page b5:first {
+    margin-top: 14mm;
+  }
+  /* 切换 B5:body 加 class="paper-b5" */
+  .paper-b5 { page: b5; }
+
+  @media print {
+    html, body {
+      background: var(--bg);
+      color: var(--txt);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body { padding-bottom: 0; font-size: 11pt; line-height: 1.55; }
+    .wrap { max-width: none; padding: 0; }
+
+    /* 每个二级标题章节另起一页 */
+    h2 {
+      break-before: page;
+      page-break-before: always;
+      break-after: avoid;
+      page-break-after: avoid;
+      margin-top: 0;
+    }
+    /* 但首个 h2 紧跟 hero,共用首页 */
+    h2:first-of-type {
+      break-before: auto;
+      page-break-before: avoid;
+    }
+    /* 三级标题与紧随内容连排,不脱页 */
+    h3, h4, summary {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+    /* 卡片 / KPI / 警示 / 时间线 / 流程图保持整体 */
+    .card, .kpi, .note, .hero, .fnode, details, .timeline, .flow {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* 网格整体尽量同页 */
+    .grid {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* 表格:行不跨页,表头跨页重复 */
+    table { break-inside: auto; page-break-inside: auto; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    thead { display: table-header-group; }
+    tfoot { display: table-footer-group; }
+    /* 代码不跨页 */
+    code, pre {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    /* 防止单行孤儿 / 寡夫 */
+    p, li, td, th {
+      orphans: 3;
+      widows: 3;
+    }
+    /* 打印时去掉阴影与圆角,减少墨水与劈裂 */
+    .card, .kpi, .note, .hero { box-shadow: none; }
+    /* 链接 / 交互控件在打印中无意义,隐藏 */
+    summary { color: var(--accent2); }
+    ::-webkit-scrollbar { display: none; }
+
+    /* ===== B5 适配:版心更窄,字号 / 内边距 / 网格密度全面收紧 ===== */
+    .paper-b5 {
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+    /* g3 降为 2 列,g2 降为 1 列,避免 B5 版心挤爆 */
+    .paper-b5 .g3 { grid-template-columns: repeat(2, 1fr); }
+    .paper-b5 .g2 { grid-template-columns: 1fr; }
+    /* 容器内边距压缩 */
+    .paper-b5 .card { padding: 12px 14px; }
+    .paper-b5 .hero { padding: 20px 22px; }
+    .paper-b5 .kpi { padding: 12px; }
+    /* 表格字号收紧 */
+    .paper-b5 table { font-size: 11.5px; }
+    .paper-b5 th, .paper-b5 td { padding: 5px 8px; }
+    /* 标题梯度按比例缩小 */
+    .paper-b5 h1 { font-size: 24px; }
+    .paper-b5 h2 { font-size: 17px; margin: 32px 0 10px; padding-left: 10px; }
+    .paper-b5 h3 { font-size: 13.5px; margin: 16px 0 8px; }
+    /* KPI 数字与流程图 */
+    .paper-b5 .stat { font-size: 24px; }
+    .paper-b5 .flow { font-size: 11.5px; gap: 6px; }
+    .paper-b5 .fnode { padding: 9px 11px; min-width: 92px; }
+    /* 键值对行 */
+    .paper-b5 .m2 { font-size: 12px; padding: 6px 0; grid-template-columns: 110px 1fr; }
+    /* 时间线缩进 */
+    .paper-b5 .timeline { padding-left: 18px; }
+    .paper-b5 .tl::before { left: -23px; width: 8px; height: 8px; }
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <div class="hero">
-    <h1>太昊 OS — Linux 内核工作原理说明书</h1>
+    <h1>太昊 OS — Linux 内核工作原理</h1>
     <div class="sub">qemu-aarch64 仿真原型开发验证平台 · 依据 <code>docs/linux-内核裁剪方案.md</code> v0.0.7 · 决策表 87 项</div>
     <div class="spec">
       <span>内核 <b>Linux 6.6 LTS</b></span>
       <span>平台 <b>qemu-aarch64 virt</b></span>
-      <span>实时 <b>PREEMPT_VOLUNTARY</b>(不上 RT)</span>
+      <span>实时 <b>PREEMPT_VOLUNTARY</b></span>
       <span>压缩 <b>zstd</b></span>
       <span>开发主机 <b>amd64</b></span>
     </div>
@@ -97,7 +206,7 @@
     </div>
   </div>
   <div class="card">
-    <h3>amd64 等价替换规则(仅平台相关)</h3>
+    <h3>amd64 等价替换规则</h3>
     <table>
       <tr><th>契约条目</th><th>arm64 / qemu virt</th><th>amd64 / qemu q35</th></tr>
       <tr><td><span class="sec-num">串口 (#53)</span></td><td>pl011</td><td>8250(16550A)</td></tr>
@@ -437,7 +546,7 @@
     <div class="note"><b>共享契约:</b>真机配置独立维护(<code>real-rk3588.config</code>),子系统裁剪决策表是唯一共享契约,两份配置都从契约推导。</div>
   </div>
 
-  <h2>十一、终端架构认知(两层模型)</h2>
+  <h2>十一、终端架构认知</h2>
   <div class="grid g3">
     <div class="card">
       <h3>认知决策层 · 大脑皮层</h3>

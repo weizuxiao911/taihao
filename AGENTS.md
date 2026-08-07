@@ -172,16 +172,16 @@ taihao/
 | --- | --- | --- | --- |
 | **QEMU** | 测试 / 体验 OS 镜像（aarch64 + x86_64，可编程集成、可调试） | 必装 | `brew install qemu` / `apt install qemu-system-arm qemu-system-x86` |
 | **UTM** | Linux VM host（macOS 上跑 Buildroot 构建） | 必装 | `brew install --cask utm` |
-| **Lima** | headless Linux VM 替代 UTM | 可选 | `brew install lima` |
+| **Lima** | headless Linux VM 替代 UTM（构建用） | 采用 | `brew install lima` |
 | **Apple Silicon native** | ARM64 Linux 直接跑 | 极简开发 | 不需装；Buildroot 仍是 Linux-only |
 
-工作流：Buildroot 在 UTM/Lima 下的 Linux VM 跑；QEMU 启动构建产物测试 / 体验 OS；真机部署走 dd / OTA。
+工作流：Buildroot / 内核构建在 Lima 下的 Linux VM 跑；QEMU 启动构建产物测试 / 体验 OS；真机部署走 dd / OTA。技术路径必须走 QEMU 系虚拟化，不用 Docker / 容器化。
 
 ## 调试 / 排查 / 验证 SOP
 
 ### 当前阶段（构建集成批次）
 
-仓库状态：内核裁剪契约定稿（Linux 6.6 LTS，v0.0.7 决策表 87 项）+ aarch64 基线片段（`config/kernel/qemu-aarch64-{ci,e2e}.config`）+ 映射核对表 + 简短说明，已复核通过；`scripts/kernel-build/` 构建 / 仿真脚本批次进行中；无 CI。SOP：
+仓库状态：内核裁剪契约定稿（Linux 6.6 LTS，v0.0.7 决策表 87 项）+ aarch64 基线片段（`config/kernel/qemu-aarch64-{ci,e2e}.config`）+ 映射核对表 + 简短说明，已复核通过；`scripts/kernel-build/` 构建 / 仿真脚本已交付；实测验证批次进行中。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
 2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.7 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
@@ -191,7 +191,14 @@ taihao/
    - Mermaid 图无 `style` / `classDef` / Emoji
    - 命名符合「命名 + 术语定义」
    - 文档中明说目标硬件（RK3588 同级别）、基座（Buildroot）、烧录（dd + OTA）、仿真（QEMU）
-5. **镜像构建**：`./scripts/kernel-build/build-kernel.sh ci|e2e`（依赖 Linux 6.6 源码固定 commit + ccache）
+5. **镜像构建（QEMU 系构建路径，不用 Docker / 容器化）**：
+   - 本机（macOS）：`brew install ccache shellcheck lima`
+   - Lima 启动 ARM64 Linux VM：`limactl start --name <vm> --set='.arch="aarch64"'`（或直接 `limactl start --name <vm> <templ>`），进入 `limactl shell <vm>`
+   - VM 内装构建依赖：`apt install aarch64-linux-gnu-gcc bc bison flex libelf-dev openssl'` + git / ccache / cpio
+   - 在 VM 内执行构建：`./scripts/kernel-build/build-kernel.sh ci|e2e`（源码自动 clone + 固定 commit v6.6；ccache 复用缓存缩短增量）
+   - 产物同步回宿主：虚拟机内构建出的 `out/` 与用户已安装 QEMU 的宿主共享 / 同步后，用 `scripts/kernel-build/qemu-start-{ci,e2e}.sh` 启动验证
+   - 冒烟标准：镜像内 systemd `basic.target` 达成，退出码 0
+   - 快照标准：`save-snap` / `load-snap` 循环成功，重启 < 2 s；镜像 / initramfs 更换 → 快照失效自动重建
 6. **变更日志**：每次对正式工程的修改必须在本文件「变更日志」新增一行
 
 ### 内核对齐（规划）
@@ -221,3 +228,5 @@ taihao/
 | 2026-08-07 | 源码层整体重置：src/ 五模块、examples/、packaging/（Buildroot + 分区脚本）、scripts/verify.sh 全部移除；AGENTS.md 目录树 / SOP 更新为「构建集成批次」（仅按 linux-内核裁剪方案 v0.0.7 完成镜像内核裁剪与封装）；新建 docs/kernel-build-任务.md 下发构建 / 仿真脚本任务 + scripts/kernel-build/ 目录骨架 | 仓库根 |
 | 2026-08-07 | 新增「终端架构认知（两层模型）」：认知决策层（RK3588 + Pi-Agent + 4-7B）/ 执行层回路（rt-loop 10-100Hz）/ 稳控反射层（MCU）；同步撰写记录到 内核工作原理.html §十一 | AGENTS.md、内核工作原理.html |
 | 2026-08-07 | 内核工作原理.html 修订：§二 端到端服务清单对齐契约（5 服务：pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）、§十一 两层模型排版重构（三层卡片 + 职责边界 + 推理抽象层）；新建 docs/kernel-build-e2e-任务.md（端到端镜像构建与运行验证任务，e2e 验证批次） | 内核工作原理.html、docs/kernel-build-e2e-任务.md |
+| 2026-08-07 | 技术路径定案：QEMU 系构建路径（Lima ARM64 Linux VM 内构建 + 宿主 QEMU 启动验证），明确不用 Docker / 容器化；工具栈 Lima 升为「采用」；SOP「镜像构建」步骤细化（VM 依赖安装 + build-kernel.sh + 产物同步 + 冒烟/快照标准） | AGENTS.md |
+| 2026-08-07 | 达标实测 + 口径修订：scripts/kernel-build 全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s / rootfs busybox+systemd pid1）；启用未提交二次返修（ccache 4.x 兼容、snapshot hash 去 state、probe ANSI、qemu -display none 等）为交付态；契约 §2.3 冷构建口径放宽为「4~8 核区间 3~5 min + 硬上限 10 min」（Lima 4 核实测 263 s） | docs/linux-内核裁剪方案.md、docs/kernel-build-任务.md、docs/kernel-build-e2e-任务.md |
