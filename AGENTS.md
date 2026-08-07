@@ -179,9 +179,9 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（服务层回填批次）
+### 当前阶段（服务层落地批次）
 
-仓库状态：内核裁剪契约 v0.0.8（冷构建放宽为 4~8 核区间 3~5 min + 硬上限 10 min）+ `scripts/kernel-build/` 构建 / 仿真脚本全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）+ 验收报告交付；服务层（src/ 五模块 + systemd unit）回填中。SOP：
+仓库状态：内核裁剪契约 v0.0.8（冷构建放宽为 4~8 核区间 3~5 min + 硬上限 10 min）+ `scripts/kernel-build/` 构建 / 仿真脚本全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）+ 验收报告交付；服务层（src/ 五模块 + systemd unit）按设计规格开发中。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
 2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.7 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
@@ -230,4 +230,4 @@ taihao/
 | 2026-08-07 | 内核工作原理.html 修订：§二 端到端服务清单对齐契约（5 服务：pi-agent / hal-gateway / rt-loop / comm-center / extension-bridge）、§十一 两层模型排版重构（三层卡片 + 职责边界 + 推理抽象层）；新建 docs/kernel-build-e2e-任务.md（端到端镜像构建与运行验证任务，e2e 验证批次） | 内核工作原理.html、docs/kernel-build-e2e-任务.md |
 | 2026-08-07 | 技术路径定案：QEMU 系构建路径（Lima ARM64 Linux VM 内构建 + 宿主 QEMU 启动验证），明确不用 Docker / 容器化；工具栈 Lima 升为「采用」；SOP「镜像构建」步骤细化（VM 依赖安装 + build-kernel.sh + 产物同步 + 冒烟/快照标准） | AGENTS.md |
 | 2026-08-07 | 达标实测 + 口径修订：scripts/kernel-build 全链路实测通过（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s / rootfs busybox+systemd pid1）；启用未提交二次返修（ccache 4.x 兼容、snapshot hash 去 state、probe ANSI、qemu -display none 等）为交付态；契约 §2.3 冷构建口径放宽为「4~8 核区间 3~5 min + 硬上限 10 min」（Lima 4 核实测 263 s） | docs/linux-内核裁剪方案.md、docs/kernel-build-任务.md、docs/kernel-build-e2e-任务.md |
-| 2026-08-07 | 服务层回填批次启动：新建 docs/kernel-services-回填-任务.md（重建 src/ 五模块 + systemd unit + rootfs 回填 + 五位 is-active 全绿验收）；SOP 当前阶段更新为「服务层回填批次」 | docs/kernel-services-回填-任务.md、AGENTS.md |
+| 2026-08-07 | 服务层落地批次启动：新建 docs/kernel-services-任务.md（按设计规格实现 src/ 五模块 + systemd unit + 端到端五位 active 验收）替代原回填口径任务；SOP 当前阶段更新为「服务层落地批次」 | docs/kernel-services-任务.md、AGENTS.md |
