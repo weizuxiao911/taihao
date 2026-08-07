@@ -18,31 +18,33 @@ source "$_LIB_DIR/common.sh"
 CCACHE_BASEDIR="${CCACHE_BASEDIR:-$KERNEL_BUILD_CACHE_DIR/ccache}"
 CCACHE_DIR="${CCACHE_DIR:-$CCACHE_BASEDIR}"
 CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-5G}"
-CCACHE_COMPRESS="${CCACHE_COMPRESS:-1}"
+# ccache 4.x 的 compression 选项为 bool(true/false),不是数字
+CCACHE_COMPRESS="${CCACHE_COMPRESS:-true}"
 CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS:-time_macros,include_file_mtime,include_file_ctime,file_macro,locale}"
 
 ccache_init() {
     require_cmd ccache
     mkdir -p "$CCACHE_DIR"
-    ccache_dir_check
     ccache_configure
+    ccache_dir_check
     info "ccache 已初始化: $CCACHE_DIR"
 }
 
 ccache_dir_check() {
-    local stat
-    stat=$(ccache -s 2>&1) || true
-    if ! echo "$stat" | grep -q "cache directory"; then
-        die "ccache 未指向 $CCACHE_DIR"
-    fi
+    # ccache -s 不打印 cache_dir 路径,直接用目录存在性 + ccache 可达性检查
+    [ -d "$CCACHE_DIR" ] || die "ccache 目录不存在: $CCACHE_DIR"
+    # ccache -p 显示当前配置,确认 max_size 等生效
+    ccache -p >/dev/null 2>&1 || die "ccache -p 失败,配置未生效"
+    info "ccache 配置: $(ccache -p 2>&1 | grep -E '^(cache_dir|max_size|compression)' | tr '\n' ' ')"
 }
 
 ccache_configure() {
-    ccache set "basedir" "$CCACHE_BASEDIR" >/dev/null
-    ccache set "cache_dir" "$CCACHE_DIR" >/dev/null
-    ccache set "max_size" "$CCACHE_MAXSIZE" >/dev/null
-    ccache set "compression" "$CCACHE_COMPRESS" >/dev/null
-    ccache set "sloppiness" "$CCACHE_SLOPPINESS" >/dev/null
+    # ccache 4.x 配置语法:`ccache -o KEY=VALUE`(不能用 `ccache set`,会触发 wrapper 模式报错 "compiler set")
+    # ccache 4.x 选项:cache_dir, max_size, compression (bool), sloppiness;basedir 在 4.x 移除
+    ccache -o "cache_dir=$CCACHE_DIR" >/dev/null
+    ccache -o "max_size=$CCACHE_MAXSIZE" >/dev/null
+    ccache -o "compression=$CCACHE_COMPRESS" >/dev/null
+    ccache -o "sloppiness=$CCACHE_SLOPPINESS" >/dev/null
 }
 
 ccache_export() {

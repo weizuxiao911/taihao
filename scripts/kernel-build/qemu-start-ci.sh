@@ -83,8 +83,11 @@ info "  initramfs: $INITRAMFS"
 info "  内存: $MEMORY / CPU: $CPUS / 超时: $TIMEOUT"
 
 rm -f "$SERIAL_LOG" "$LOG_DIR/hmp-sock"
+touch "$SERIAL_LOG" || die "无法创建 serial.log: $SERIAL_LOG"
 
-# CI 固定 -nographic(无图形界面),不挂 9p/virtio-fs,无状态盘
+# CI 固定 -display none(无图形界面),不挂 9p/virtio-fs,无状态盘
+# 注:-nographic 等价于 -display none + -serial mon:stdio,会覆盖 -serial file:PATH
+# 故显式 -display none 并单独 -serial file:...
 QEMU_ARGS=(
     -M virt
     -cpu cortex-a72
@@ -92,8 +95,8 @@ QEMU_ARGS=(
     -smp "$CPUS"
     -kernel "$IMAGE"
     -initrd "$INITRAMFS"
-    -append "console=ttyAMA0 earlycon=pl011,0x0900000 root=/dev/ram rdinit=/bin/systemd systemd.unified_cgroup_hierarchy=1 loglevel=4"
-    -nographic
+    -append "console=ttyAMA0 rdinit=/sbin/init loglevel=4"
+    -display none
     -serial "file:$SERIAL_LOG"
     -monitor unix:$LOG_DIR/hmp-sock,server,nowait
     -no-reboot

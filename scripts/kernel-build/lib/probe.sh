@@ -15,9 +15,11 @@ source "$_LIB_DIR/common.sh"
 # ===== 配置 =====
 PROBE_TIMEOUT_SEC="${PROBE_TIMEOUT_SEC:-30}"
 PROBE_INTERVAL_SEC="${PROBE_INTERVAL_SEC:-1}"
-# system 串口实际行:Reached target basic.target.(带句点)
-# 或 Reached target Basic System(等价)
-PROBE_LOG_PATTERN="${PROBE_LOG_PATTERN:-Reached target (basic[. ]target|basic[.]target.|Basic System)}"
+# systemd 串口实际行(带 ANSI 颜色):
+#   [ OK ] Reached target basic.target - Basic System.
+# 但 ANSI 序列(\033[0;1;39m) 包裹 basic.target,所以用 .* 兼容
+# 加载快照后 systemd 直接跳过 basic.target 进入 multi-user 阶段,所以也匹配 multi-user.target
+PROBE_LOG_PATTERN="${PROBE_LOG_PATTERN:-Reached target.*(basic\.target|multi-user\.target)}"
 
 # ===== 探测:basic.target =====
 # 用法:probe_basic_target <serial_log_path>

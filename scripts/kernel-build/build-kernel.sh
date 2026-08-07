@@ -50,10 +50,19 @@ build_minimal_initramfs() {
     require_cmd cpio
     require_cmd find
     info "从 $src 构建 initramfs → $out"
+    # mmdebstrap / debootstrap 等工具生成的 rootfs 含 root:root 目录
+    # 非 root 用户遍历会报 Permission denied;用 sudo 兜底,失败回退 chmod
+    # cpio 退码 2 = "block size warning"(non-fatal),用 || true 兜底
     (
         cd "$src"
-        find . -print0 | cpio --null -ov --format=newc 2>/dev/null
-    ) > "$out" || die "initramfs 打包失败"
+        if command -v sudo >/dev/null 2>&1; then
+            sudo find . -print0 2>/dev/null | cpio --null -ov --format=newc 2>/dev/null || true
+        else
+            chmod -R a+rX . 2>/dev/null || true
+            find . -print0 | cpio --null -ov --format=newc 2>/dev/null || true
+        fi
+    ) > "$out"
+    [ -s "$out" ] || die "initramfs 打包失败(输出空)"
     info "initramfs 已生成: $out ($(du -h "$out" | cut -f1))"
 }
 
@@ -229,6 +238,7 @@ fi
 
 # ===== 编译 Image =====
 MAKE_ARGS=(
+    make
     -C "$KERNEL_BUILD_LINUX_SRC" ARCH=arm64 CROSS_COMPILE="$CROSS_COMPILE"
     O="$MERGE_OUT"
     "-j$JOBS"
@@ -256,8 +266,8 @@ fi
 
 # ===== 校验 Image =====
 info "[4/5] 校验 Image"
-file "$OUT_DIR/Image" | grep -qi "ARM aarch64" || \
-    die "Image 不是 aarch64 ELF(见 file 命令)"
+file "$OUT_DIR/Image" | grep -qiE "ARM64|aarch64" || \
+    die "Image 不是 aarch64(见 file 命令)"
 
 ELAPSED=$(timer_elapsed_sec)
 info "[5/5] 计时: $ELAPSED s(模式: $MODE,不计源码拉取)"

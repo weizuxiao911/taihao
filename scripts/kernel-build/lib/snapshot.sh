@@ -12,22 +12,24 @@ _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$_LIB_DIR/common.sh"
 
 # ===== hash 计算 =====
+# 注意:state_img 内含 savevm 写入的 vmstate,save 后会变化,不能再作为 hash 因子
+# 只用 Image + initramfs 作为快照失效判定的输入
 snapshot_compute_hash() {
-    local img="$1" initramfs="$2" state_img="$3"
+    local img="$1" initramfs="$2"
     {
         [ -n "$img" ] && [ -f "$img" ] && sha256sum "$img" || echo "noimg"
         [ -n "$initramfs" ] && [ -f "$initramfs" ] && sha256sum "$initramfs" || echo "noinit"
-        [ -n "$state_img" ] && [ -f "$state_img" ] && sha256sum "$state_img" || echo "nostate"
     } | sha256sum | awk '{print $1}'
 }
 
 # ===== 失效判定 =====
 # 用法:snapshot_is_valid <snap_dir> <snap_name> <img> <initramfs> <state_img>
+# state_img 不参与 hash(只 Image + initramfs 决定快照是否适用)
 snapshot_is_valid() {
     local snap_dir="$1" snap_name="$2" img="$3" initramfs="$4" state_img="$5"
     local hash_file="$snap_dir/${snap_name}.hashes"
     local current stored
-    current=$(snapshot_compute_hash "$img" "$initramfs" "$state_img")
+    current=$(snapshot_compute_hash "$img" "$initramfs")
     if [ -f "$hash_file" ]; then
         stored=$(cat "$hash_file")
         [ "$current" = "$stored" ] && return 0
@@ -67,7 +69,8 @@ snapshot_save() {
     [ -n "$state_img" ] && snapshot_create_state_img "$state_img"
     info "保存快照: $snap_name @ $snap_dir"
     hmp_command "$hmp_sock" savevm "$snap_name"
-    snapshot_compute_hash "$img" "$initramfs" "$state_img" > "$snap_dir/${snap_name}.hashes"
+    # hash 只算 Image + initramfs(state_img 内含 savevm 写入,不再作为 hash 因子)
+    snapshot_compute_hash "$img" "$initramfs" > "$snap_dir/${snap_name}.hashes"
     info "快照已保存,hash=$(cat "$snap_dir/${snap_name}.hashes")"
 }
 
