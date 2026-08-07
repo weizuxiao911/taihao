@@ -1,8 +1,6 @@
 [Unit]
 Description=太昊 OS · 调度通信中心(comm-center)
 Documentation=man:taihao-os
-After=network-online.target
-Wants=network-online.target
 
 [Service]
 Type=simple

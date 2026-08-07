@@ -127,7 +127,11 @@ async fn main() -> anyhow::Result<()> {
             let body = format!("{{\"whitelisted_devices\":{}}}\n", w.entries.len());
             drop(w);
             use tokio::io::AsyncWriteExt;
-            let _ = sock.write_all(body.as_bytes()).await;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(), body
+            );
+            let _ = sock.write_all(resp.as_bytes()).await;
             let _ = sock.shutdown().await;
         }
     });

@@ -19,6 +19,10 @@ use tokio::sync::RwLock;
 
 const SOCK_PATH: &str = "/run/taihao-os/rt-loop.sock";
 
+fn sock_path_env() -> String {
+    std::env::var("RT_LOOP_SOCK").unwrap_or_else(|_| SOCK_PATH.to_string())
+}
+
 /// 闭环回路状态
 #[derive(Default)]
 struct LoopState {
@@ -76,12 +80,13 @@ async fn serve_unix_socket(
     mut mcu: MockMcu,
     tx: tokio::sync::mpsc::UnboundedSender<IntentMsg>,
 ) -> anyhow::Result<()> {
-    let _ = std::fs::remove_file(SOCK_PATH);
-    if let Some(p) = std::path::Path::new(SOCK_PATH).parent() {
-        std::fs::create_dir_all(p).context("创建 /run/taihao-os")?;
+    let sock = sock_path_env();
+    let _ = std::fs::remove_file(&sock);
+    if let Some(p) = std::path::Path::new(&sock).parent() {
+        std::fs::create_dir_all(p).context("创建 socket 目录")?;
     }
-    let listener = UnixListener::bind(SOCK_PATH).context("绑定 rt-loop Unix socket")?;
-    tracing::info!(path = SOCK_PATH, "rt-loop Unix socket 监听");
+    let listener = UnixListener::bind(&sock).context("绑定 rt-loop Unix socket")?;
+    tracing::info!(path = %sock, "rt-loop Unix socket 监听");
 
     loop {
         let (stream, _addr) = match listener.accept().await {
@@ -160,7 +165,11 @@ async fn main() -> anyhow::Result<()> {
                 s.cycles, s.intents_processed, freq_hz);
             drop(s);
             use tokio::io::AsyncWriteExt;
-            let _ = sock.write_all(body.as_bytes()).await;
+            let resp = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                body.len(), body
+            );
+            let _ = sock.write_all(resp.as_bytes()).await;
             let _ = sock.shutdown().await;
         }
     });

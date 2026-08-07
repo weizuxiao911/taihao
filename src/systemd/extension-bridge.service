@@ -1,8 +1,6 @@
 [Unit]
 Description=太昊 OS · 扩展 / MCP 桥(extension-bridge)
 Documentation=man:taihao-os
-After=network-online.target
-Wants=network-online.target
 
 [Service]
 Type=simple

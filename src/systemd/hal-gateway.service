@@ -1,8 +1,6 @@
 [Unit]
 Description=太昊 OS · 硬件访问网关(hal-gateway)
 Documentation=man:taihao-os
-After=network-online.target
-Wants=network-online.target
 
 [Service]
 Type=simple
