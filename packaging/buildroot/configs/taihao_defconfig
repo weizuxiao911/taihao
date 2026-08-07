@@ -1,0 +1,56 @@
+# 太昊 OS · qemu-aarch64 基座板型
+# 依据:docs/linux-内核裁剪方案.md §1 / §2.1;AGENTS.md 技术选型
+
+# ===== 架构 =====
+BR2_aarch64=y
+BR2_cortex_a72=y
+
+# ===== 内核:复用契约裁剪方案产物(不由 Buildroot 构建) =====
+# 内核 Image 由 scripts/kernel-build/build-kernel.sh 产出
+# Buildroot 仅打包 rootfs;内核以外部 Image 提供(qemu 启动参数 -kernel)
+
+# ===== 系统 =====
+BR2_ROOTFS_OVERLAY="$(BR2_EXTERNAL_TAIHAO_PATH)/overlays/rootfs"
+BR2_ROOTFS_POST_BUILD_SCRIPT="$(BR2_EXTERNAL_TAIHAO_PATH)/scripts/post-build.sh"
+BR2_ROOTFS_POST_IMAGE_SCRIPT="$(BR2_EXTERNAL_TAIHAO_PATH)/scripts/post-image.sh"
+
+# ===== 工具链 =====
+BR2_TOOLCHAIN_BUILDROOT_GLIBC=y
+BR2_TOOLCHAIN_BUILDROOT_CXX=y
+
+# ===== init / 基础 =====
+BR2_INIT_SYSTEMD=y
+BR2_PACKAGE_SYSTEMD=y
+BR2_PACKAGE_BUSYBOX=y
+BR2_PACKAGE_UTIL_LINUX=y
+
+# ===== 网络 / 协议 =====
+BR2_PACKAGE_IPROUTE2=y
+BR2_PACKAGE_OPENSSL=y
+
+# ===== 太昊 OS 服务层 =====
+BR2_PACKAGE_TAIHAO=y
+BR2_PACKAGE_PI_AGENT=y
+BR2_PACKAGE_RT_LOOP=y
+BR2_PACKAGE_HAL_GATEWAY=y
+BR2_PACKAGE_COMM_CENTER=y
+BR2_PACKAGE_EXTENSION_BRIDGE=y
+
+# ===== 文件系统镜像 =====
+BR2_TARGET_ROOTFS_EXT2=y
+BR2_TARGET_ROOTFS_EXT2_4=y
+BR2_TARGET_ROOTFS_EXT2_SIZE="1G"
+
+# ===== 目标文件系统打包 =====
+BR2_PACKAGE_HOST_GENEXT2FS=y
+BR2_PACKAGE_HOST_E2FSPROGS=y
+
+# ===== Rust 工具链(服务层交叉编译) =====
+BR2_PACKAGE_HOST_RUSTC=y
+BR2_PACKAGE_HOST_CARGO=y
+BR2_PACKAGE_HOST_RUSTC_ARCH_EXTENSION="+crc"
+
+# ===== 杂项 =====
+BR2_GLOBAL_PATCH_DIR="$(BR2_EXTERNAL_TAIHAO_PATH)/patches"
+BR2_CCACHE=y
+BR2_PACKAGE_CA_CERTIFICATES=y

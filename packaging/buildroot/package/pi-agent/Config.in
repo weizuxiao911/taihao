@@ -1,0 +1,6 @@
+config BR2_PACKAGE_PI_AGENT
+	bool "pi-agent"
+	depends on BR2_PACKAGE_TAIHAO
+	help
+	  太昊 OS 认知决策层载体:Agent Loop / SKILL Registry /
+	  Provider 抽象 / Hooks / Extension。
