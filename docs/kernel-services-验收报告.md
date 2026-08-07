@@ -133,18 +133,57 @@ deny 事件写出 `/var/log/taihao-os/ext-audit.log` ✓
 
 **结论:按任务文档 §六 / §九口径,验收通过。**
 
-## 5. 设计口径(对照 §三规格,非验收门槛)
+## 5. 设计口径(对照 §三规格)
 
-| 项 | 现状 | 说明 |
+| 项 | 现状 | 验证 |
 | --- | --- | --- |
-| Provider | `StubProvider` 占位 | 未接真实 OpenAI 端点;抽象已就位,后续批次接入 |
-| comm-center 协议 | SSE stub + Mesh UDP 广播 | WS / MQTT 未来再补(不属 §六验收项) |
-| pi-agent ↔ rt-loop 意图链路 | 接口就绪,intents 尚未实测非 0 | 属规格边界,集成链路滚到下一批验证 |
-| SKILL 签名校验 | sha256 非空即过(占位) | 真验证后续批次 |
+| Provider | `OpenAiProvider`(reqwest 真实 HTTP)+ `StubProvider` 兜底 | ✅ 外围 mock 验证:OpenAI 兼容 mock 端点收到 tick#96-100 请求 |
+| comm-center 协议 | SSE + Mesh UDP + WS(8086)+ MQTT(配置驱动)+ 故障切换 | ✅ WS 监听确认;MQTT 未配置时挂起(厂商配置驱动) |
+| pi-agent ↔ rt-loop 意图链路 | 全通:pi-agent → comm-center(路由)→ rt-loop | ✅ 外围 mock 验证:intents=81,rt-loop 处理 Intent |
+| SKILL 签名校验 | ed25519 真实验签(verify_strict) | ✅ 外围 mock 验证:签名 SKILL → decision=approved;无签名 → denied |
 
-以上差异不影响 §六 通过判定,已如实记录。
+## 6. 增量验证实测(mock 外围,不进产物)
 
-## 6. 产物
+### 6.1 Provider 真实调用
+
+```
+[openai-mock] req model=mock-model user=tick#96
+[openai-mock] req model=mock-model user=tick#97
+...
+[openai-mock] req model=mock-model user=tick#100
+```
+
+pi-agent 通过 reqwest 真实 POST `/v1/chat/completions` 到 mock 端点,响应 `[mock-openai] ack: tick#80` 被 Agent Loop 消费。
+
+### 6.2 SKILL 签名验签
+
+| 场景 | 结果 |
+| --- | --- |
+| 无签名 SKILL(内置占位) | `decision=denied`,不发 Intent |
+| ed25519 签名 SKILL(公钥匹配) | `decision=approved`,发 Intent |
+| 签名/公钥不匹配 | `decision=denied`(验签失败日志) |
+
+验证链:python cryptography 生成 ed25519 密钥对 → 签 `echo:0.1.0:echo` → pi-agent `verify_strict` 验签通过。
+
+### 6.3 意图链路
+
+```
+pi-agent: Intent 已发送到 comm-center id=intent-1786118604015 skill=echo
+comm-center: (内部总线接收,路由到 rt-loop)
+rt-loop:  rt-loop 处理 Intent id=intent-1786118604015 skill=echo state={"pos":0.0,"vel":0.0}
+```
+
+- pi-agent 决策 approved → 发 Intent → comm-center 内部总线 → 按 skill 路由到 rt-loop → rt-loop 处理并回收状态
+- 最终 health:`{"ok":true,"intents":81}`(81 个 Intent 计数)
+
+### 6.4 comm-center 协议面
+
+- SSE 接入端 8084 ✓
+- Mesh UDP 7685 ✓
+- WS 接入端 8086 ✓(简化帧)
+- MQTT:未配置 `COMM_CENTER_MQTT_URL` 时挂起等待(厂商配置驱动)
+
+## 7. 产物
 
 | 路径 | 用途 |
 | --- | --- |
