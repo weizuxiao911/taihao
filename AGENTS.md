@@ -182,9 +182,9 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（基座 OS 落地批次）
+### 当前阶段（基座 OS 落地批次验收通过）
 
-仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 开发中。SOP：
+仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 验收通过（rootfs.ext2 镜像 5 服务 Started + Multi-User System；partition / ota-build / ota-apply 三脚本实测可执行）。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
 2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.8 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
@@ -232,3 +232,4 @@ taihao/
 | 2026-08-07 | 术语定案同步：①「中台调度通信模块」改名「调度通信中心」（英文 comm-center 不变，README / AGENTS / 任务文档同步）② Pi Agent 明确 AGENT 内核采用 `badlogic/pi-mono`（仅技术内核选型参考，不构成品牌词；OpenClaw 同上）③ SKILL.md 明确兼容 Anthropic Agent Skills 规范 | AGENTS.md、README.md、docs/kernel-services-任务.md、docs/kernel-build-e2e-任务.md |
 | 2026-08-07 | 服务层实测复核验收（按任务文档 §六/§九口径）：五服务 active / rt-loop 46.1Hz 实测 / hal 白名单拒绝 / ext 越权拒绝 / 快照 load 0s / CI 冒烟 7s(RC=0) 六条硬门槛全通过；taihao-check.sh 以 perl 探测 Unix socket + 8082 健康端点取代 curl;kernel-services-验收报告重写为实测终态（替代早期未实跑版本）；SOP 当前阶段保持不变（服务层落地批次验收通过） | docs/kernel-services-验收报告.md、src/systemd/taihao-check.sh、AGENTS.md |
 | 2026-08-07 | 基座 OS 落地批次启动：新建 docs/kernel-buildroot-任务.md（Buildroot 基座打包 + 分区 / A-B OTA 骨架，对齐内核契约 §2.1/§2.3/§8 + AGENTS 技术选型）；AGENTS 目录树补 packaging/ / src/ / scripts/services/、修正 HTML 文件名、SOP 当前阶段更新为「基座 OS 落地批次」 | docs/kernel-buildroot-任务.md、AGENTS.md |
+| 2026-08-08 | 基座 OS 落地批次验收通过（按任务文档 §四 五硬性项）：Buildroot 镜像 rootfs.ext2（1GB ext4）QEMU 启动 → 5 服务 Started + Multi-User System；5 binary/unit/wants/SKILL/taihao 用户/default.target 全量核验；partition-layout / ota-build / ota-apply 三脚本实测可执行（4 分区 GPT + ota.json sha256 + 写槽→校验→切换→回滚契约）；kernel-buildroot-验收报告定稿；SOP 当前阶段更新为「基座 OS 落地批次验收通过」 | docs/kernel-buildroot-验收报告.md、packaging/buildroot、scripts/partition、AGENTS.md |
