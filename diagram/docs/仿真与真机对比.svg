@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 960">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', 'Noto Sans SC', 'PingFang SC', sans-serif; }
+    .title { font-size: 26px; font-weight: 800; letter-spacing: 2px; fill: #0f172a; }
+    .node-title { font-size: 15px; font-weight: 800; text-anchor: middle; fill: #0f172a; }
+    .node-sub { font-size: 11px; font-weight: 400; text-anchor: middle; fill: #475569; }
+    .col-label { font-size: 13px; font-weight: 700; text-anchor: middle; }
+    .dim { font-size: 12px; font-weight: 700; text-anchor: middle; fill: #0f172a; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+
+  <text x="240" y="60" class="title">仿真 vs 真机配置分离</text>
+  <text x="240" y="86" font-size="14" fill="#64748b">契约 §8 · 共享子系统裁剪决策表 · 各自独立 .config · 真机 = real-rk3588.config</text>
+
+  <!-- 列头 -->
+  <rect x="220" y="120" width="340" height="60" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="390" y="156" class="col-label" fill="#6366f1">仿真(qemu virt)</text>
+
+  <rect x="580" y="120" width="160" height="60" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="660" y="156" class="col-label" fill="#0f172a">维度</text>
+
+  <rect x="760" y="120" width="340" height="60" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="930" y="156" class="col-label" fill="#f59e0b">真机(RK3588)</text>
+
+  <!-- 8 行: y=190+i*86, 节点高 56 -->
+  <!-- 1 平台 -->
+  <rect x="220" y="210" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="242" class="node-title">qemu virt DTS</text>
+  <rect x="580" y="210" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="242" class="dim">平台</text>
+  <rect x="760" y="210" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="242" class="node-title">RK3588 DTS</text>
+
+  <!-- 2 网络设备 -->
+  <rect x="220" y="296" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="328" class="node-title">virtio-net</text>
+  <rect x="580" y="296" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="328" class="dim">网络设备</text>
+  <rect x="760" y="296" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="328" class="node-title">rk3588 gmac / 厂商 WiFi</text>
+
+  <!-- 3 块设备 -->
+  <rect x="220" y="382" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="414" class="node-title">virtio-blk</text>
+  <rect x="580" y="382" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="414" class="dim">块设备</text>
+  <rect x="760" y="382" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="414" class="node-title">eMMC / SD 控制器</text>
+
+  <!-- 4 控制台 -->
+  <rect x="220" y="468" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="500" class="node-title">virtio-console + pl011</text>
+  <rect x="580" y="468" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="500" class="dim">控制台</text>
+  <rect x="760" y="468" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="500" class="node-title">物理串口</text>
+
+  <!-- 5 实时 -->
+  <rect x="220" y="554" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="586" class="node-title">PREEMPT_VOLUNTARY</text>
+  <rect x="580" y="554" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="586" class="dim">实时</text>
+  <rect x="760" y="554" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="586" class="node-title">PREEMPT_RT_FULL</text>
+
+  <!-- 6 NPU / GPU -->
+  <rect x="220" y="640" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="672" class="node-title">全裁</text>
+  <rect x="580" y="640" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="672" class="dim">NPU / GPU</text>
+  <rect x="760" y="640" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="672" class="node-title">厂商驱动</text>
+
+  <!-- 7 文件系统 -->
+  <rect x="220" y="726" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="758" class="node-title">ext4</text>
+  <rect x="580" y="726" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="758" class="dim">文件系统</text>
+  <rect x="760" y="726" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="758" class="node-title">ext4 + 厂商加密</text>
+
+  <!-- 8 kexec -->
+  <rect x="220" y="812" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="844" class="node-title">CONFIG_KEXEC=n(禁用)</text>
+  <rect x="580" y="812" width="160" height="56" rx="6" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="660" y="844" class="dim">kexec</text>
+  <rect x="760" y="812" width="340" height="56" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="930" y="844" class="node-title">n(A/B bootloader 切换)</text>
+</svg>

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 780">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', 'Noto Sans SC', 'PingFang SC', sans-serif; }
+    .title { font-size: 26px; font-weight: 800; letter-spacing: 2px; fill: #0f172a; }
+    .node-title { font-size: 15px; font-weight: 800; text-anchor: middle; fill: #0f172a; }
+    .node-sub { font-size: 11px; font-weight: 400; text-anchor: middle; fill: #475569; }
+    .edge-label { font-size: 12px; font-weight: 600; text-anchor: middle; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+
+  <text x="240" y="70" class="title">五服务通信拓扑</text>
+  <text x="240" y="96" font-size="14" fill="#64748b">kernel-services-任务.md §三 · Intent / HalCall 经 comm-center 路由 · Extension 经 JSON-RPC</text>
+
+  <!-- ===== L1: pi-agent(框) ===== -->
+  <rect x="240" y="130" width="960" height="120" rx="0" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="250" y="152" class="node-title" style="text-anchor:start" fill="#6366f1">L1 · pi-agent(认知决策层)</text>
+  <rect x="520" y="165" width="400" height="60" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="720" y="195" class="node-title">Agent Loop · SKILL Registry · Provider</text>
+  <text x="720" y="217" class="node-sub">ed25519 验签 · OpenAI 端点 · 产出 Intent</text>
+
+  <!-- Intent: pi-agent节点(720,225) -> comm-center节点(720,435) 中心对中心 -->
+  <line x1="720" y1="225" x2="720" y2="427" stroke="#6366f1" stroke-width="2"/>
+  <polyline points="712,427 720,433 728,427" fill="none" stroke="#6366f1" stroke-width="2"/>
+  <text x="665" y="330" class="edge-label" fill="#6366f1">Intent(高层意图)</text>
+
+  <!-- ===== L2: comm-center(框) ===== -->
+  <rect x="240" y="400" width="960" height="120" rx="0" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="8 5"/>
+  <text x="250" y="422" class="node-title" style="text-anchor:start" fill="#06b6d4">L2 · comm-center(调度通信中心)</text>
+  <rect x="520" y="435" width="400" height="60" rx="6" fill="#ecfeff" stroke="#06b6d4" stroke-width="2"/>
+  <text x="720" y="465" class="node-title">内部总线(Unix socket)· 路由 · 故障切换</text>
+  <text x="720" y="487" class="node-sub">SSE / WS / MQTT + Mesh UDP · 厂商配置驱动</text>
+
+  <!-- L2 节点左缘(520,465) -> rt-loop(400,600): 左缘水平出发, x=400 垂直接入 -->
+  <path d="M 520 465 L 400 465 L 400 594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <polyline points="392,594 400,600 408,594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <text x="455" y="460" class="edge-label" fill="#06b6d4">Intent 路由</text>
+
+  <!-- L2 节点(720,495) -> hal-gateway(720,600) 垂直中心对中心 -->
+  <path d="M 720 495 L 720 594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <polyline points="712,594 720,600 728,594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <text x="762" y="552" class="edge-label" fill="#06b6d4">HalCall 路由</text>
+
+  <!-- L2 节点(720,495) -> extension-bridge(1040,600) 折线: 先下 540 再右 -->
+  <path d="M 920 465 L 1040 465 L 1040 594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <polyline points="1032,594 1040,600 1048,594" fill="none" stroke="#06b6d4" stroke-width="2"/>
+  <text x="980" y="460" class="edge-label" fill="#06b6d4">扩展路由</text>
+
+  <!-- ===== L3: 终端服务(框) ===== -->
+  <rect x="240" y="568" width="960" height="120" rx="0" fill="none" stroke="#8b5cf6" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="250" y="590" class="node-title" style="text-anchor:start" fill="#8b5cf6">L3 · 终端服务</text>
+  <!-- 3 节点: 宽 260 -->
+  <rect x="270" y="600" width="260" height="60" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="400" y="630" class="node-title">rt-loop</text>
+  <text x="400" y="652" class="node-sub">执行层回路 · 10-100Hz · mock MCU</text>
+
+  <rect x="590" y="600" width="260" height="60" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="720" y="630" class="node-title">hal-gateway</text>
+  <text x="720" y="652" class="node-sub">硬件访问网关 · 白名单 · 审计 · mock 驱动</text>
+
+  <rect x="910" y="600" width="260" height="60" rx="6" fill="#ede9fe" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1040" y="630" class="node-title">extension-bridge</text>
+  <text x="1040" y="652" class="node-sub">扩展 / MCP 桥 · JSON-RPC · 越权拒绝</text>
+
+  <!-- Hooks: pi-agent节点(1040,195)右缘 -> extension-bridge(1170,630)右缘 右侧绕行,不穿任何框内 -->
+  <path d="M 920 195 L 1240 195 L 1240 630 L 1178 630" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+  <polyline points="1178,622 1172,630 1178,638" fill="none" stroke="#8b5cf6" stroke-width="2"/>
+  <text x="1095" y="190" class="edge-label" fill="#8b5cf6">Hooks / Extension(JSON-RPC)</text>
+</svg>

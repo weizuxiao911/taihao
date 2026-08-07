@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 800">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', 'Noto Sans SC', 'PingFang SC', sans-serif; }
+    .title { font-size: 26px; font-weight: 800; letter-spacing: 2px; fill: #0f172a; }
+    .node-title { font-size: 15px; font-weight: 800; text-anchor: middle; fill: #0f172a; }
+    .node-sub { font-size: 11px; font-weight: 400; text-anchor: middle; fill: #475569; }
+    .box-label { font-size: 13px; font-weight: 700; text-anchor: middle; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+
+  <text x="240" y="60" class="title">固件三分区 + A/B OTA</text>
+  <text x="240" y="86" font-size="14" fill="#64748b">kernel-buildroot-任务.md §3.4 · dd 工厂烧录 + OTA 升级回滚</text>
+
+  <!-- ===== 左:分区布局 ===== -->
+  <rect x="160" y="120" width="520" height="620" rx="8" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="8 5"/>
+  <text x="420" y="145" class="box-label" fill="#06b6d4">分区布局(三分区)</text>
+
+  <!-- boot -->
+  <rect x="190" y="170" width="460" height="90" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="420" y="206" class="node-title">boot</text>
+  <text x="420" y="230" class="node-sub">内核 Image · 引导 · 只读 · 64M</text>
+
+  <!-- 槽 A -->
+  <rect x="190" y="300" width="460" height="90" rx="6" fill="#ccfbf1" stroke="#14b8a6" stroke-width="2"/>
+  <text x="420" y="336" class="node-title">系统槽 A(当前 active)</text>
+  <text x="420" y="360" class="node-sub">rootfs · systemd · 5 服务 · SKILL · 1G</text>
+
+  <!-- 槽 B -->
+  <rect x="190" y="430" width="460" height="90" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="420" y="466" class="node-title">系统槽 B(待升级 inactive)</text>
+  <text x="420" y="490" class="node-sub">rootfs · systemd · 5 服务 · SKILL · 1G</text>
+
+  <!-- data -->
+  <rect x="190" y="560" width="460" height="90" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="420" y="596" class="node-title">data(业务分区)</text>
+  <text x="420" y="620" class="node-sub">厂商可写 · 升级保留 · 剩余空间</text>
+
+  <text x="420" y="700" class="node-sub">工厂:dd 烧录布局</text>
+
+  <!-- ===== 右:OTA 流程 ===== -->
+  <rect x="760" y="120" width="520" height="620" rx="8" fill="none" stroke="#06b6d4" stroke-width="2" stroke-dasharray="8 5"/>
+  <text x="1020" y="145" class="box-label" fill="#06b6d4">A/B OTA 升级流程</text>
+
+  <!-- 步骤 1 -->
+  <rect x="790" y="170" width="460" height="90" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="1020" y="206" class="node-title">① ota-build:新镜像打包</text>
+  <text x="1020" y="230" class="node-sub">差分 / 全量 OTA 包 · ota-&lt;ver&gt;.tar.gz + ota.json</text>
+
+  <!-- 1 -> 2 -->
+  <line x1="1020" y1="260" x2="1020" y2="294" stroke="#6366f1" stroke-width="2"/>
+  <polyline points="1012,294 1020,300 1028,294" fill="none" stroke="#6366f1" stroke-width="2"/>
+
+  <!-- 步骤 2 -->
+  <rect x="790" y="300" width="460" height="90" rx="6" fill="#ccfbf1" stroke="#14b8a6" stroke-width="2"/>
+  <text x="1020" y="336" class="node-title">② ota-apply:写入非活动槽</text>
+  <text x="1020" y="360" class="node-sub">槽 A active → 写入 B · dd system_B.ext4 → p3</text>
+
+  <!-- 2 -> 3 -->
+  <line x1="1020" y1="390" x2="1020" y2="424" stroke="#14b8a6" stroke-width="2"/>
+  <polyline points="1012,424 1020,430 1028,424" fill="none" stroke="#14b8a6" stroke-width="2"/>
+
+  <!-- 步骤 3 -->
+  <rect x="790" y="430" width="460" height="90" rx="6" fill="#fce7f3" stroke="#ec4899" stroke-width="2"/>
+  <text x="1020" y="466" class="node-title">③ 校验 → 切换活动槽</text>
+  <text x="1020" y="490" class="node-sub">sha256 校验 → bootloader 切 B · boot_slot=B + saveenv</text>
+
+  <!-- 3 -> 4 -->
+  <line x1="1020" y1="520" x2="1020" y2="554" stroke="#ec4899" stroke-width="2"/>
+  <polyline points="1012,554 1020,560 1028,554" fill="none" stroke="#ec4899" stroke-width="2"/>
+
+  <!-- 步骤 4 -->
+  <rect x="790" y="560" width="460" height="90" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="2"/>
+  <text x="1020" y="596" class="node-title">④ 失败回滚 → 切回 A</text>
+  <text x="1020" y="620" class="node-sub">启动失败 → bootloader 计数超限 · 自动切回(≤3 次)</text>
+
+  <text x="1020" y="700" class="node-sub">仿真层脚本骨架 · 真机 bootloader 切换后续批次</text>
+</svg>

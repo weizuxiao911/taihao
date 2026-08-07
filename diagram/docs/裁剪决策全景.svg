@@ -1,0 +1,210 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 860">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', 'Noto Sans SC', 'PingFang SC', sans-serif; }
+    .title { font-size: 26px; font-weight: 800; letter-spacing: 2px; fill: #0f172a; }
+    .hdr { font-size: 13px; font-weight: 700; text-anchor: middle; }
+    .cat { font-size: 14px; font-weight: 700; fill: #0f172a; }
+    .cnt { font-size: 14px; font-weight: 800; text-anchor: middle; }
+    .sub { font-size: 11px; font-weight: 400; fill: #475569; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+
+  <text x="240" y="60" class="title">子系统裁剪决策全景</text>
+  <text x="240" y="86" font-size="14" fill="#64748b">契约 §5 · 14 类 87 项 · 保留 / CI裁 / 全裁 / 可选 四档决策</text>
+
+  <!-- 列头: 类别列 300 宽 + 4 决策列 -->
+  <rect x="240" y="110" width="300" height="40" rx="0" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="390" y="135" class="hdr" fill="#0f172a">类别</text>
+  <rect x="540" y="110" width="165" height="40" rx="0" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="622" y="135" class="hdr" fill="#6366f1">保留</text>
+  <rect x="705" y="110" width="165" height="40" rx="0" fill="#fce7f3" stroke="#ec4899" stroke-width="1.5"/>
+  <text x="787" y="135" class="hdr" fill="#ec4899">CI 裁</text>
+  <rect x="870" y="110" width="165" height="40" rx="0" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+  <text x="952" y="135" class="hdr" fill="#f59e0b">全裁</text>
+  <rect x="1035" y="110" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="1117" y="135" class="hdr" fill="#14b8a6">可选</text>
+
+  <!-- 14 行: y=160+i*46, 行高 40 -->
+  <!-- 5.1 -->
+  <rect x="240" y="160" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="178" class="cat">5.1 网络协议栈 #1~9</text>
+  <text x="252" y="192" class="sub">TCP/IP · CAN · BT/WiFi 栈</text>
+  <rect x="540" y="160" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="185" class="cnt" fill="#6366f1">4</text>
+  <rect x="705" y="160" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="185" class="cnt" fill="#ec4899">1</text>
+  <rect x="870" y="160" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="185" class="cnt" fill="#f59e0b">4</text>
+  <rect x="1035" y="160" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="185" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.2 -->
+  <rect x="240" y="206" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="224" class="cat">5.2 文件系统 #10~18</text>
+  <text x="252" y="238" class="sub">ext4 · overlayfs · 9p</text>
+  <rect x="540" y="206" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="231" class="cnt" fill="#6366f1">2</text>
+  <rect x="705" y="206" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="231" class="cnt" fill="#ec4899">3</text>
+  <rect x="870" y="206" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="231" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="206" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="231" class="cnt" fill="#14b8a6">2</text>
+
+  <!-- 5.3 -->
+  <rect x="240" y="252" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="270" class="cat">5.3 安全 / 沙箱 #19~27</text>
+  <text x="252" y="284" class="sub">namespaces · seccomp · AppArmor</text>
+  <rect x="540" y="252" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="277" class="cnt" fill="#6366f1">5</text>
+  <rect x="705" y="252" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="277" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="252" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="277" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="252" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="277" class="cnt" fill="#14b8a6">2</text>
+
+  <!-- 5.4 -->
+  <rect x="240" y="298" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="316" class="cat">5.4 调试 / 可观测性 #28~33</text>
+  <text x="252" y="330" class="sub">printk · ftrace · kprobes</text>
+  <rect x="540" y="298" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="323" class="cnt" fill="#6366f1">1</text>
+  <rect x="705" y="298" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="323" class="cnt" fill="#ec4899">2</text>
+  <rect x="870" y="298" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="323" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="298" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="323" class="cnt" fill="#14b8a6">1</text>
+
+  <!-- 5.5 -->
+  <rect x="240" y="344" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="362" class="cat">5.5 IPC #34~38</text>
+  <text x="252" y="376" class="sub">pipe · unix socket · SysV</text>
+  <rect x="540" y="344" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="369" class="cnt" fill="#6366f1">2</text>
+  <rect x="705" y="344" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="369" class="cnt" fill="#ec4899">2</text>
+  <rect x="870" y="344" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="369" class="cnt" fill="#f59e0b">1</text>
+  <rect x="1035" y="344" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="369" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.6 -->
+  <rect x="240" y="390" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="408" class="cat">5.6 块设备 / IO #39~44</text>
+  <text x="252" y="422" class="sub">virtio-blk · io_uring · DM</text>
+  <rect x="540" y="390" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="415" class="cnt" fill="#6366f1">2</text>
+  <rect x="705" y="390" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="415" class="cnt" fill="#ec4899">1</text>
+  <rect x="870" y="390" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="415" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="390" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="415" class="cnt" fill="#14b8a6">1</text>
+
+  <!-- 5.7 -->
+  <rect x="240" y="436" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="454" class="cat">5.7 网络设备 #45~51</text>
+  <text x="252" y="468" class="sub">virtio-net · tun · 物理网卡</text>
+  <rect x="540" y="436" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="461" class="cnt" fill="#6366f1">2</text>
+  <rect x="705" y="436" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="461" class="cnt" fill="#ec4899">3</text>
+  <rect x="870" y="436" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="461" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="436" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="461" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.8 -->
+  <rect x="240" y="482" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="500" class="cat">5.8 输入 / 显示 / 控制台 #52~58</text>
+  <text x="252" y="514" class="sub">virtio-console · DRM · 声卡</text>
+  <rect x="540" y="482" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="507" class="cnt" fill="#6366f1">2</text>
+  <rect x="705" y="482" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="507" class="cnt" fill="#ec4899">3</text>
+  <rect x="870" y="482" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="507" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="482" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="507" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.9 -->
+  <rect x="240" y="528" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="546" class="cat">5.9 字符 / 平台设备 #59~66</text>
+  <text x="252" y="560" class="sub">SPI/I2C/GPIO · V4L2 · USB</text>
+  <rect x="540" y="528" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="553" class="cnt" fill="#6366f1">3</text>
+  <rect x="705" y="528" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="553" class="cnt" fill="#ec4899">5</text>
+  <rect x="870" y="528" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="553" class="cnt" fill="#f59e0b">0</text>
+  <rect x="1035" y="528" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="553" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.10 -->
+  <rect x="240" y="574" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="592" class="cat">5.10 电源 / 内存 #67~71</text>
+  <text x="252" y="606" class="sub">THP · zswap · suspend</text>
+  <rect x="540" y="574" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="599" class="cnt" fill="#6366f1">1</text>
+  <rect x="705" y="574" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="599" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="574" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="599" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="574" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="599" class="cnt" fill="#14b8a6">2</text>
+
+  <!-- 5.11 -->
+  <rect x="240" y="620" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="638" class="cat">5.11 调度 / cgroup #72~77</text>
+  <text x="252" y="652" class="sub">CFS · FIFO/RR · cgroup v2</text>
+  <rect x="540" y="620" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="645" class="cnt" fill="#6366f1">4</text>
+  <rect x="705" y="620" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="645" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="620" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="645" class="cnt" fill="#f59e0b">2</text>
+  <rect x="1035" y="620" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="645" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.12 -->
+  <rect x="240" y="666" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="684" class="cat">5.12 模块化 #78~79</text>
+  <text x="252" y="698" class="sub">CONFIG_MODULES(E2E y / CI n)</text>
+  <rect x="540" y="666" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="691" class="cnt" fill="#6366f1">1</text>
+  <rect x="705" y="666" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="691" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="666" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="691" class="cnt" fill="#f59e0b">1</text>
+  <rect x="1035" y="666" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="691" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.13 -->
+  <rect x="240" y="712" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="730" class="cat">5.13 启动 / 平台 #80~84</text>
+  <text x="252" y="744" class="sub">EFI · ACPI/PSCI · earlycon</text>
+  <rect x="540" y="712" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="737" class="cnt" fill="#6366f1">4</text>
+  <rect x="705" y="712" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="737" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="712" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="737" class="cnt" fill="#f59e0b">1</text>
+  <rect x="1035" y="712" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="737" class="cnt" fill="#14b8a6">0</text>
+
+  <!-- 5.14 -->
+  <rect x="240" y="758" width="300" height="40" rx="0" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="252" y="776" class="cat">5.14 NPU / GPU / VPU #85~87</text>
+  <text x="252" y="790" class="sub">RKNN · Mali · 视频编解码</text>
+  <rect x="540" y="758" width="165" height="40" rx="0" fill="#eef2ff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="622" y="783" class="cnt" fill="#6366f1">0</text>
+  <rect x="705" y="758" width="165" height="40" rx="0" fill="#fce7f3" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="787" y="783" class="cnt" fill="#ec4899">0</text>
+  <rect x="870" y="758" width="165" height="40" rx="0" fill="#fef3c7" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="952" y="783" class="cnt" fill="#f59e0b">3</text>
+  <rect x="1035" y="758" width="165" height="40" rx="0" fill="#ccfbf1" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="1117" y="783" class="cnt" fill="#14b8a6">0</text>
+</svg>
