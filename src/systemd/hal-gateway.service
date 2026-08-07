@@ -1,0 +1,50 @@
+[Unit]
+Description=太昊 OS · 硬件访问网关(hal-gateway)
+Documentation=man:taihao-os
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/hal-gateway
+Restart=on-failure
+RestartSec=2s
+User=taihao
+Group=taihao
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# 允许访问 device node(契约:hal-gateway 才具设备访问)
+DeviceAllow=/dev/spidev0.0 rwm
+DeviceAllow=/dev/spidev0.1 rwm
+DeviceAllow=/dev/i2c-0 rwm
+DeviceAllow=/dev/i2c-1 rwm
+DeviceAllow=/dev/gpiochip0 rwm
+DeviceAllow=/dev/gpiochip1 rwm
+DevicePolicy=closed
+
+RuntimeDirectory=taihao-os
+RuntimeDirectoryMode=0750
+LimitNOFILE=4096
+MemoryMax=64M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hal-gateway
+
+[Install]
+WantedBy=multi-user.target

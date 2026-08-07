@@ -1,0 +1,23 @@
+[package]
+name = "rt-loop"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "rt-loop"
+path = "src/main.rs"
+
+[dependencies]
+taihao-common = { path = "../taihao-common" }
+serde.workspace = true
+serde_json.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "net", "io-util", "fs", "sync", "time", "signal"] }
+anyhow.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+async-trait = "0.1"
+
+[lints.rust]
+unsafe_code = "forbid"

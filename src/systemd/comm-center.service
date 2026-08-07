@@ -1,0 +1,47 @@
+[Unit]
+Description=太昊 OS · 调度通信中心(comm-center)
+Documentation=man:taihao-os
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/comm-center
+Restart=on-failure
+RestartSec=2s
+User=taihao
+Group=taihao
+
+# 沙箱
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# 运行时目录
+RuntimeDirectory=taihao-os
+RuntimeDirectoryMode=0750
+
+# 资源限制
+LimitNOFILE=4096
+MemoryMax=128M
+
+# 日志
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=comm-center
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,46 @@
+[Unit]
+Description=太昊 OS · 认知决策层载体(pi-agent)
+Documentation=man:taihao-os
+After=comm-center.service extension-bridge.service
+Wants=comm-center.service extension-bridge.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/pi-agent
+Restart=on-failure
+RestartSec=2s
+User=taihao
+Group=taihao
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+RuntimeDirectory=taihao-os
+RuntimeDirectoryMode=0750
+LimitNOFILE=4096
+MemoryMax=256M
+
+# SKILL / 配置 / 状态目录(只读)
+ReadOnlyPaths=/etc/taihao-os /usr/share/taihao-os/skills
+ReadWritePaths=/var/lib/taihao-os /var/log/taihao-os
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pi-agent
+
+[Install]
+WantedBy=multi-user.target

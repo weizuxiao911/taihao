@@ -1,0 +1,21 @@
+[Unit]
+Description=太昊 OS · 服务集成验证(check 5 服务 is-active + 白名单 + 频率)
+Documentation=man:taihao-os
+After=multi-user.target
+
+[Service]
+Type=oneshot
+# 等待 5 服务启动 + 让 audit log 写入,然后跑验收
+ExecStartPre=/bin/sleep 5
+ExecStart=/usr/bin/taihao-check.sh
+RemainAfterExit=true
+User=root
+StandardOutput=journal+console
+StandardError=journal+console
+RemainAfterExit=true
+User=root
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

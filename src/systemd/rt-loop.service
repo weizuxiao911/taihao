@@ -1,0 +1,44 @@
+[Unit]
+Description=太昊 OS · 执行层回路(rt-loop,10-100Hz 闭环)
+Documentation=man:taihao-os
+After=comm-center.service hal-gateway.service
+Wants=comm-center.service hal-gateway.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/rt-loop
+Restart=on-failure
+RestartSec=2s
+User=taihao
+Group=taihao
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=false
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+
+# 设备访问(通过 hal-gateway,不直连;但需 dev 节点用于 mock 设备)
+DevicePolicy=closed
+RuntimeDirectory=taihao-os
+RuntimeDirectoryMode=0750
+LimitNOFILE=4096
+MemoryMax=64M
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rt-loop
+
+[Install]
+WantedBy=multi-user.target
