@@ -1,7 +1,11 @@
-menu "太昊 OS · 树莓派 Pi 4B"
+config BR2_PACKAGE_TAIHAO
+	bool "太昊 OS 服务层"
+	help
+	  太昊 OS 服务层 5 模块:pi-agent / rt-loop / hal-gateway /
+	  comm-center / extension-bridge。
+
 source "$BR2_EXTERNAL_TAIHAO_PI4B_PATH/package/pi-agent/Config.in"
 source "$BR2_EXTERNAL_TAIHAO_PI4B_PATH/package/rt-loop/Config.in"
 source "$BR2_EXTERNAL_TAIHAO_PI4B_PATH/package/hal-gateway/Config.in"
 source "$BR2_EXTERNAL_TAIHAO_PI4B_PATH/package/comm-center/Config.in"
 source "$BR2_EXTERNAL_TAIHAO_PI4B_PATH/package/extension-bridge/Config.in"
-endmenu
