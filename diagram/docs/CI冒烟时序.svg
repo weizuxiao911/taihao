@@ -46,17 +46,17 @@
 
   <!-- 消息4: S->>S 加载 unit(自消息环) -->
   <path d="M 810 308 L 838 308 L 838 336 L 816 336" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
-  <polyline points="828,340 820,336 828,332" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <polyline points="822,340 814,336 822,332" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="844" y="326" class="msg" text-anchor="start">加载 unit</text>
 
   <!-- 消息5: S->>S mount tmpfs/sysfs/proc/devtmpfs(自消息环) -->
   <path d="M 810 364 L 838 364 L 838 392 L 816 392" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
-  <polyline points="828,396 820,392 828,388" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <polyline points="822,396 814,392 822,388" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="844" y="382" class="msg" text-anchor="start">mount tmpfs/sysfs/proc/devtmpfs</text>
 
   <!-- 消息6: S->>S 拉起 basic.target(自消息环) -->
   <path d="M 810 420 L 838 420 L 838 448 L 816 448" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
-  <polyline points="828,452 820,448 828,444" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
+  <polyline points="822,452 814,448 822,444" fill="none" stroke="#94a3b8" stroke-width="1.5"/>
   <text x="844" y="438" class="msg" text-anchor="start">拉起 basic.target</text>
 
   <!-- 消息7: S-->>Q basic.target active(虚线返回) -->
