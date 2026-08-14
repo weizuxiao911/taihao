@@ -69,14 +69,25 @@ case "$PLATFORM" in
         bash "$SCRIPT_DIR/fetch-rpi-firmware.sh"
         FW_DIR="${TAIHAO_OUT:-/home/weizuxiao.guest/taihao-out}/rpi-firmware"
 
-        cp "$FW_DIR/boot/bootcode.bin" "$STAGING/boot/"
-        cp "$FW_DIR/boot/start_x.elf" "$STAGING/boot/"
-        cp "$FW_DIR/boot/fixup_x.dat" "$STAGING/boot/"
+        # 拷全部 VideoCore 固件(start*.elf / fixup*.dat / bootcode.bin)
+        # RPi 4B 固件按文件名优先级查(start4x.elf → start_x.elf → ...),
+        # 拷不全就有 "Firmware not found" 风险
+        for f in "$FW_DIR/boot/"*; do
+            [ -f "$f" ] || continue
+            base="$(basename "$f")"
+            # 排除 *.dtb / *.dtbo / overlays / LICENCE / COPYING(避免 boot 分区塞爆)
+            case "$base" in
+                *.dtb|*.dtbo) continue ;;
+                LICENCE*|COPYING*) continue ;;
+                overlays) continue ;;
+            esac
+            cp "$f" "$STAGING/boot/"
+        done
 
         # Image → kernel8.img(RPi 固件只认这个文件名)
         mv "$STAGING/boot/Image" "$STAGING/boot/kernel8.img"
 
-        # DTB(按平台选一个)
+        # DTB(按平台选一个,RPi 固件优先看 device_tree= 指定的)
         case "$PLATFORM" in
             rpi4b)  cp "$FW_DIR/boot/bcm2711-rpi-4-b.dtb"      "$STAGING/boot/" ;;
             rpi3bp) cp "$FW_DIR/boot/bcm2710-rpi-3-b-plus.dtb"  "$STAGING/boot/" ;;
