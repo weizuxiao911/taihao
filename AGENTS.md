@@ -184,9 +184,9 @@ taihao/
 
 | 平台 | 启动链 | img 文件 | 用途 | 状态 |
 |---|---|---|---|---|
-| **QEMU virt** | QEMU 直启 SD 卡 img | `out/taihao-qemu.img` | 仿真验证 / CI | M1 |
-| **RPi 4B** | VideoCore → kernel8 + DTB | `out/taihao-rpi4b.img` | 路演功能介绍 | M2(优先) |
-| **RPi 3B+** | VideoCore(`arm_64bit=1`)→ kernel8 + DTB | `out/taihao-rpi3bp.img` | 路演功能介绍 | M3 |
+| **QEMU virt** | QEMU 直启 SD 卡 img | `out/taihao-qemu.img` | 仿真验证 / CI | M1 ✅ |
+| **RPi 4B** | VideoCore → kernel8 + DTB | `out/taihao-rpi4b.img` | 路演功能介绍 | M2 ✅ |
+| **RPi 3B+** | VideoCore(`arm_64bit=1`)→ kernel8 + DTB | `out/taihao-rpi3bp.img` | 路演功能介绍 | M3 ✅ |
 | **RK3588** | maskrom → idbloader → U-Boot → Image + DTB | `out/taihao-rk3588.img` | 批量生产机器人 | M4 后置 |
 
 **共享**:`Image`(arm64 一份)+ `initramfs.cpio` + `rootfs.ext4`
@@ -199,9 +199,9 @@ taihao/
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（基座 OS 落地批次验收通过 + 多平台 img 扩展启动）
+### 当前阶段（基座 OS 落地批次验收通过 + 多平台 img 启动镜像完成 M1-M3）
 
-仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 验收通过（rootfs.ext2 镜像 5 服务 Started + Multi-User System；partition / ota-build / ota-apply 三脚本实测可执行）；当前新增多平台 img 构建需求（QEMU + RPi 3B+/4B + RK3588），共享内核 + rootfs，按平台拼 bootloader 与 DTB 出可启动 img。SOP：
+仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 验收通过（rootfs.ext2 镜像 5 服务 Started + Multi-User System；partition / ota-build / ota-apply 三脚本实测可执行）；多平台 SD 卡 img（M1 QEMU SD 卡 + M2 RPi 4B + M3 RPi 3B+）已交付，每个 img 1.3GB（FAT32 boot 256M + ext4 root 1G），共享 arm64 内核 + buildroot rootfs，按平台拼 bootloader 与 DTB 出可启动 img；RK3588 启动镜像（M4）后置。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
 2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.8 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
@@ -251,3 +251,4 @@ taihao/
 | 2026-08-07 | 基座 OS 落地批次启动：新建 docs/kernel-buildroot-任务.md（Buildroot 基座打包 + 分区 / A-B OTA 骨架，对齐内核契约 §2.1/§2.3/§8 + AGENTS 技术选型）；AGENTS 目录树补 packaging/ / src/ / scripts/services/、修正 HTML 文件名、SOP 当前阶段更新为「基座 OS 落地批次」 | docs/kernel-buildroot-任务.md、AGENTS.md |
 | 2026-08-08 | 基座 OS 落地批次验收通过（按任务文档 §四 五硬性项）：Buildroot 镜像 rootfs.ext2（1GB ext4）QEMU 启动 → 5 服务 Started + Multi-User System；5 binary/unit/wants/SKILL/taihao 用户/default.target 全量核验；partition-layout / ota-build / ota-apply 三脚本实测可执行（4 分区 GPT + ota.json sha256 + 写槽→校验→切换→回滚契约）；kernel-buildroot-验收报告定稿；SOP 当前阶段更新为「基座 OS 落地批次验收通过」 | docs/kernel-buildroot-验收报告.md、packaging/buildroot、scripts/partition、AGENTS.md |
 | 2026-08-14 | 黑盒验收口径收尾：post-build.sh 收尾三件事 ① 清掉 mkusers 上轮加的同名 dbus/systemd-* 用户,留给 fakeroot mkusers 重新加(避免 mkusers 跨次 build 冲突)② dbus.service.d/10-root.conf drop-in 强制 dbus 跑 root + machine-id 兜底生成 ③ systemd-remount-fs.service mask 掉(initramfs 无 /dev/root 必然 FAILED);登录门面改 TAIHAO:/etc/issue + /etc/hostname + /etc/os-release PRETTY_NAME + 自定义 taihao-login 替换 agetty(serial-getty drop-in)→ 黑盒 boot 零 [FAILED] + `Welcome to TAIHAO` + `username:` 提示;新增 scripts/run/ 三个 QEMU 启动脚本(qemu冒烟启动.sh / qemu运行镜像.sh / qemu调试镜像.sh)统一封装 Image+initramfs.cpio+snap 路径;AGENTS.md 新增「构建产物 · 平台覆盖」章节登记多平台 img(QEMU + RPi 3B+/4B + RK3588)需求 | packaging/buildroot/scripts/post-build.sh、scripts/run/、AGENTS.md |
+| 2026-08-14 | 多平台 img M1 + M2 + M3 交付:QEMU SD 卡 img(`taihao-qemu.img`,FAT32 boot + ext4 root,genimage 拼);RPi 4B img(`taihao-rpi4b.img`,VideoCore 固件 + kernel8.img + bcm2711-rpi-4-b.dtb + config.txt arm_64bit=1);RPi 3B+ img(`taihao-rpi3bp.img`,同上 DTB 换 bcm2710-rpi-3-b-plus.dtb);共享 arm64 内核 + buildroot rootfs,bootloader 平台各自拼;post-image.sh 改写为支持多平台(PLATFORM=qemu\|rpi4b\|rpi3bp via BR2_ROOTFS_POST_IMAGE_SCRIPT_ARGS);新增 fetch-rpi-firmware.sh 运行时从 github tarball 拉 VideoCore 固件(缓存到 ~/taihao-out/rpi-firmware/);新增 scripts/run/img烧到SD卡.sh(macOS dd 烧录 + 二次确认);AGENTS.md 更新 M1-M3 状态 ✅ | packaging/buildroot/scripts/{post-image.sh,fetch-rpi-firmware.sh,genimage-{qemu,rpi4b,rpi3bp}.cfg}、scripts/run/img烧到SD卡.sh、AGENTS.md |
