@@ -169,7 +169,7 @@ taihao/
 - 已推送的 commit 历史不重写
 - 未推送且用户明示"重写历史"时方可（如本仓库初始化阶段）
 
-## 模拟器 / 仿真工具栈
+## 模拟器 / 仿真 / 真机工具栈
 
 | 工具 | 角色 | 必要性 | 安装 |
 | --- | --- | --- | --- |
@@ -178,13 +178,30 @@ taihao/
 | **Lima** | headless Linux VM 替代 UTM（构建用） | 采用 | `brew install lima` |
 | **Apple Silicon native** | ARM64 Linux 直接跑 | 极简开发 | 不需装；Buildroot 仍是 Linux-only |
 
+## 构建产物 · 平台覆盖
+
+构建产物 = **可启动 img**(每个平台一份),所有平台共享一份内核(arm64)+ rootfs(ext4),bootloader 各自拼。
+
+| 平台 | 启动链 | img 文件 | 用途 | 状态 |
+|---|---|---|---|---|
+| **QEMU virt** | QEMU 直启 SD 卡 img | `out/taihao-qemu.img` | 仿真验证 / CI | M1 |
+| **RPi 4B** | VideoCore → kernel8 + DTB | `out/taihao-rpi4b.img` | 路演功能介绍 | M2(优先) |
+| **RPi 3B+** | VideoCore(`arm_64bit=1`)→ kernel8 + DTB | `out/taihao-rpi3bp.img` | 路演功能介绍 | M3 |
+| **RK3588** | maskrom → idbloader → U-Boot → Image + DTB | `out/taihao-rk3588.img` | 批量生产机器人 | M4 后置 |
+
+**共享**:`Image`(arm64 一份)+ `initramfs.cpio` + `rootfs.ext4`
+**裁剪策略**:**内核一致,驱动按平台裁剪**(BASE Image 通用,各平台通过 Kconfig 片段启用平台特有驱动,如 RPi 加 `CONFIG_BRCMFMAC` / `CONFIG_VIDEO_BCM2835` 等)
+**验证与分发**:按平台维护(QEMU / RPi / RK3588 各自的 img 各自迭代,不互锁)
+
+**当前重心**:`qemu + RPi(3B+/4B)`,RK3588 真机后置
+
 工作流：Buildroot / 内核构建在 Lima 下的 Linux VM 跑；QEMU 启动构建产物测试 / 体验 OS；真机部署走 dd / OTA。技术路径必须走 QEMU 系虚拟化，不用 Docker / 容器化。
 
 ## 调试 / 排查 / 验证 SOP
 
-### 当前阶段（基座 OS 落地批次验收通过）
+### 当前阶段（基座 OS 落地批次验收通过 + 多平台 img 扩展启动）
 
-仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 验收通过（rootfs.ext2 镜像 5 服务 Started + Multi-User System；partition / ota-build / ota-apply 三脚本实测可执行）。SOP：
+仓库状态：内核裁剪契约 v0.0.8 + `scripts/kernel-build/` 构建 / 仿真链路交付（CI 冒烟 7s / 快照 load 0s / 失效自动重建 / 增量 4.7s）；服务层（src/ 五模块 + systemd unit）实测验收通过（六门槛：五服务 active / rt-loop 46.1Hz / hal 白名单拒绝 / ext 越权拒绝 / 快照 <2s / CI 回归）；Buildroot 基座打包 + 分区 / OTA 骨架按 `docs/kernel-buildroot-任务.md` 验收通过（rootfs.ext2 镜像 5 服务 Started + Multi-User System；partition / ota-build / ota-apply 三脚本实测可执行）；当前新增多平台 img 构建需求（QEMU + RPi 3B+/4B + RK3588），共享内核 + rootfs，按平台拼 bootloader 与 DTB 出可启动 img。SOP：
 
 1. **仓库状态**：开工前 `git -C <项目> status && git -C <项目> log --oneline -5`
 2. **Kconfig 产物核对**：`config/kernel/` 两份片段 ↔ `docs/linux-内核裁剪方案.md` v0.0.8 决策表 #1~#87 逐条对照；自我检查表见 `docs/kconfig-简短说明.md`
@@ -233,3 +250,4 @@ taihao/
 | 2026-08-07 | 服务层实测复核验收（按任务文档 §六/§九口径）：五服务 active / rt-loop 46.1Hz 实测 / hal 白名单拒绝 / ext 越权拒绝 / 快照 load 0s / CI 冒烟 7s(RC=0) 六条硬门槛全通过；taihao-check.sh 以 perl 探测 Unix socket + 8082 健康端点取代 curl;kernel-services-验收报告重写为实测终态（替代早期未实跑版本）；SOP 当前阶段保持不变（服务层落地批次验收通过） | docs/kernel-services-验收报告.md、src/systemd/taihao-check.sh、AGENTS.md |
 | 2026-08-07 | 基座 OS 落地批次启动：新建 docs/kernel-buildroot-任务.md（Buildroot 基座打包 + 分区 / A-B OTA 骨架，对齐内核契约 §2.1/§2.3/§8 + AGENTS 技术选型）；AGENTS 目录树补 packaging/ / src/ / scripts/services/、修正 HTML 文件名、SOP 当前阶段更新为「基座 OS 落地批次」 | docs/kernel-buildroot-任务.md、AGENTS.md |
 | 2026-08-08 | 基座 OS 落地批次验收通过（按任务文档 §四 五硬性项）：Buildroot 镜像 rootfs.ext2（1GB ext4）QEMU 启动 → 5 服务 Started + Multi-User System；5 binary/unit/wants/SKILL/taihao 用户/default.target 全量核验；partition-layout / ota-build / ota-apply 三脚本实测可执行（4 分区 GPT + ota.json sha256 + 写槽→校验→切换→回滚契约）；kernel-buildroot-验收报告定稿；SOP 当前阶段更新为「基座 OS 落地批次验收通过」 | docs/kernel-buildroot-验收报告.md、packaging/buildroot、scripts/partition、AGENTS.md |
+| 2026-08-14 | 黑盒验收口径收尾：post-build.sh 收尾三件事 ① 清掉 mkusers 上轮加的同名 dbus/systemd-* 用户,留给 fakeroot mkusers 重新加(避免 mkusers 跨次 build 冲突)② dbus.service.d/10-root.conf drop-in 强制 dbus 跑 root + machine-id 兜底生成 ③ systemd-remount-fs.service mask 掉(initramfs 无 /dev/root 必然 FAILED);登录门面改 TAIHAO:/etc/issue + /etc/hostname + /etc/os-release PRETTY_NAME + 自定义 taihao-login 替换 agetty(serial-getty drop-in)→ 黑盒 boot 零 [FAILED] + `Welcome to TAIHAO` + `username:` 提示;新增 scripts/run/ 三个 QEMU 启动脚本(qemu冒烟启动.sh / qemu运行镜像.sh / qemu调试镜像.sh)统一封装 Image+initramfs.cpio+snap 路径;AGENTS.md 新增「构建产物 · 平台覆盖」章节登记多平台 img(QEMU + RPi 3B+/4B + RK3588)需求 | packaging/buildroot/scripts/post-build.sh、scripts/run/、AGENTS.md |
