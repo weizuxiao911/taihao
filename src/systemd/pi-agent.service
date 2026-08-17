@@ -1,5 +1,5 @@
 [Unit]
-Description=太昊 OS · 认知决策层载体(pi-agent)
+Description=Taihao OS · Cognitive Decision Layer (pi-agent)
 Documentation=man:taihao-os
 After=comm-center.service extension-bridge.service
 Wants=comm-center.service extension-bridge.service

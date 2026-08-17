@@ -1,5 +1,5 @@
 [Unit]
-Description=太昊 OS · 扩展 / MCP 桥(extension-bridge)
+Description=Taihao OS · Extension / MCP Bridge (extension-bridge)
 Documentation=man:taihao-os
 
 [Service]

@@ -1,5 +1,5 @@
 #!/bin/sh
-# 太昊 OS 服务集成验证 check 脚本
+# Taihao OS service integration check script
 # 跑 4 阶段验收:is-active + hal 白名单 + extension 越权 + rt-loop 频率
 # 输出通过 tee 同时到 /var/log/taihao-os/check.log(文件) + console(qemu 串口 → host serial.log)
 
@@ -67,7 +67,7 @@ nc_call() {
 
 run() { tee -a "$OUT"; }
 
-echo "=== 太昊 OS 服务契约验收 1/4: is-active ===" | run
+echo "=== Taihao OS service contract check 1/4: is-active ===" | run
 for s in comm-center extension-bridge hal-gateway pi-agent rt-loop; do
     printf "  %-20s " "$s" | run
     systemctl is-active "$s" | run

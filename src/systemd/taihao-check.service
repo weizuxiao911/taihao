@@ -1,5 +1,5 @@
 [Unit]
-Description=太昊 OS · 服务集成验证(check 5 服务 is-active + 白名单 + 频率)
+Description=Taihao OS · Service Integration Check (verify 5 services active + whitelist + frequency)
 Documentation=man:taihao-os
 After=multi-user.target
 

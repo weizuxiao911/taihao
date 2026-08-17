@@ -1,5 +1,5 @@
 [Unit]
-Description=太昊 OS · 硬件访问网关(hal-gateway)
+Description=Taihao OS · Hardware Access Gateway (hal-gateway)
 Documentation=man:taihao-os
 
 [Service]

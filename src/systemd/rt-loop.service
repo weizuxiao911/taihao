@@ -1,5 +1,5 @@
 [Unit]
-Description=太昊 OS · 执行层回路(rt-loop,10-100Hz 闭环)
+Description=Taihao OS · Execution Loop (rt-loop, 10-100Hz closed-loop)
 Documentation=man:taihao-os
 After=comm-center.service hal-gateway.service
 Wants=comm-center.service hal-gateway.service

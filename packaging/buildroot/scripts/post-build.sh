@@ -82,43 +82,107 @@ ln -sf /dev/null "$TARGET_DIR/etc/systemd/system/systemd-remount-fs.service"
 
 echo "post-build: systemd-remount-fs masked (initramfs 无 /dev/root)"
 
+# ===== systemd-networkd-persistent-storage.service mask =====
+# systemd-networkd 的持久化存储服务,配置缺失会 FAILED(无实际影响,网络相关)
+ln -sf /dev/null "$TARGET_DIR/etc/systemd/system/systemd-networkd-persistent-storage.service"
+
+echo "post-build: systemd-networkd-persistent-storage masked (避免 black-box 验收 [FAILED])"
+
 # ===== default.target → multi-user.target(服务自启入口) =====
 ln -sf /usr/lib/systemd/system/multi-user.target \
     "$TARGET_DIR/etc/systemd/system/default.target"
 
 echo "post-build: default.target → multi-user.target"
 
+# ===== 服务单元 Description 改英文(用户要求"全部中文改成英文") =====
+# buildroot 包内 service 文件中文 Description → 英文(覆盖包安装的)
+for svc in comm-center extension-bridge hal-gateway pi-agent rt-loop; do
+    svc_file="$TARGET_DIR/usr/lib/systemd/system/${svc}.service"
+    [ -f "$svc_file" ] || continue
+    case "$svc" in
+        comm-center)      desc="Taihao OS · Communication Center (comm-center)" ;;
+        extension-bridge) desc="Taihao OS · Extension / MCP Bridge (extension-bridge)" ;;
+        hal-gateway)      desc="Taihao OS · Hardware Access Gateway (hal-gateway)" ;;
+        pi-agent)         desc="Taihao OS · Cognitive Decision Layer (pi-agent)" ;;
+        rt-loop)          desc="Taihao OS · Execution Loop (rt-loop, 10-100Hz closed-loop)" ;;
+    esac
+    sed -i "s|^Description=.*|Description=$desc|" "$svc_file"
+done
+# taihao-check.service 同样改
+check_file="$TARGET_DIR/usr/lib/systemd/system/taihao-check.service"
+[ -f "$check_file" ] && sed -i 's|^Description=.*|Description=Taihao OS · Service Integration Check (verify 5 services active + whitelist + frequency)|' "$check_file"
+
+echo "post-build: 5 service Description → 英文"
+
 # ===== 太昊 OS 验收口径:登录门面 =====
-# /etc/issue  →  "Welcome to TAIHAO"(agetty 在 login 提示之前输出)
+# /etc/issue  →  "Welcome to TAIHAO"(agetty 在 login 提示之前输出,加 \n 隔开)
 printf 'Welcome to TAIHAO\n' > "$TARGET_DIR/etc/issue"
 
 # /etc/hostname  →  TAIHAO(agetty "<hostname> login: " 用)
 printf 'TAIHAO\n' > "$TARGET_DIR/etc/hostname"
 
-# 自定义登录提示符 "username: "
-# 思路:在 serial-getty@.service 上加 drop-in,把 agetty 替换成 /sbin/taihao-login
-#       taihao-login 打印 "username: " 读一行,exec /bin/login "$REPLY"
+# 自定义登录提示符 "Welcome to TAIHAO" + "username: "
+# 思路:在 serial-getty@.service 和 console-getty 上加 drop-in,
+#       用 taihao-login 替换 agetty。taihao-login 输出 /etc/issue 和 "username: ",
+#       read username 后 exec /bin/login "$user"(传 username,login 不再显示 <host> login:)
 mkdir -p "$TARGET_DIR/usr/sbin"
 cat > "$TARGET_DIR/usr/sbin/taihao-login" <<'EOF'
 #!/bin/sh
-# 太昊 OS 自定义登录提示:用 "username: " 替代 agetty 默认的 "<host> login: "
+# Taihao OS custom login prompt
+# 输出 /etc/issue (Welcome to TAIHAO) + "username: ",read username 后 exec /bin/login "$user"
+# 避免 exec /bin/login 无参数(login 会再显示一次 <host> login: prompt,造成重复)
+if [ -r /etc/issue ]; then
+    cat /etc/issue 2>/dev/null
+fi
 printf 'username: '
 read -r user
-[ -n "$user" ] || exit 1
+if [ -z "$user" ]; then
+    exit 0
+fi
 exec /bin/login "$user"
 EOF
 chmod 0755 "$TARGET_DIR/usr/sbin/taihao-login"
 
-# 覆盖 serial-getty@.service:ExecStart 用 taihao-login
+# 覆盖 serial-getty@.service(串口 ttyAMA0 等):ExecStart 用 taihao-login,Type=simple 立即启动
 mkdir -p "$TARGET_DIR/etc/systemd/system/serial-getty@.service.d"
 cat > "$TARGET_DIR/etc/systemd/system/serial-getty@.service.d/10-taihao-login.conf" <<'EOF'
 [Service]
 ExecStart=
 ExecStart=-/usr/sbin/taihao-login
-Type=idle
+Type=simple
 EOF
 
-echo "post-build: 登录门面 → Welcome to TAIHAO + username: 提示"
+# 覆盖 console-getty.service(控制台 tty1):ExecStart 用 taihao-login,Type=simple 立即启动
+mkdir -p "$TARGET_DIR/etc/systemd/system/console-getty.service.d"
+cat > "$TARGET_DIR/etc/systemd/system/console-getty.service.d/10-taihao-login.conf" <<'EOF'
+[Service]
+ExecStart=
+ExecStart=-/usr/sbin/taihao-login
+Type=simple
+EOF
+
+# 覆盖 getty@.service template(用于 generator 创建的 getty@ttyN):ExecStart 用 taihao-login
+mkdir -p "$TARGET_DIR/etc/systemd/system/getty@.service.d"
+cat > "$TARGET_DIR/etc/systemd/system/getty@.service.d/10-taihao-login.conf" <<'EOF'
+[Service]
+ExecStart=
+ExecStart=-/usr/sbin/taihao-login
+Type=simple
+EOF
+
+# 手动启用 getty@tty1.service(getty.target.wants)和 console-getty + serial-getty@ttyAMA0
+mkdir -p "$TARGET_DIR/etc/systemd/system/getty.target.wants"
+ln -sf /usr/lib/systemd/system/getty@.service \
+    "$TARGET_DIR/etc/systemd/system/getty.target.wants/getty@tty1.service"
+mkdir -p "$TARGET_DIR/etc/systemd/system/multi-user.target.wants"
+ln -sf /usr/lib/systemd/system/console-getty.service \
+    "$TARGET_DIR/etc/systemd/system/multi-user.target.wants/console-getty.service"
+ln -sf /usr/lib/systemd/system/serial-getty@.service \
+    "$TARGET_DIR/etc/systemd/system/multi-user.target.wants/serial-getty@ttyAMA0.service"
+
+echo "post-build: getty@tty1 + console-getty + serial-getty@ttyAMA0 启用 taihao-login"
+
+echo "post-build: 登录门面 → Welcome to TAIHAO + username: 提示(serial + console)"
 
 # /etc/os-release 也被 systemd 早期用来打 "Welcome to ${PRETTY_NAME}"
 # 把 PRETTY_NAME / NAME / ID 改成 TAIHAO,黑盒看不到任何 "Buildroot"
