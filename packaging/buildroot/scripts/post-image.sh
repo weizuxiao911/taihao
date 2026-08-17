@@ -69,43 +69,65 @@ case "$PLATFORM" in
         bash "$SCRIPT_DIR/fetch-rpi-firmware.sh"
         FW_DIR="${TAIHAO_OUT:-/home/weizuxiao.guest/taihao-out}/rpi-firmware"
 
-        # 拷全部 VideoCore 固件(start*.elf / fixup*.dat / bootcode.bin)
-        # RPi 4B 固件按文件名优先级查(start4x.elf → start_x.elf → ...),
-        # 拷不全就有 "Firmware not found" 风险
+        # 拷全部 VideoCore 固件 + 全部 dtb + overlays/,与官方 RPi OS boot 分区 100% 一致。
+        # RPi 固件按文件名优先级查(start4x.elf → start_x.elf → ...),拷不全就
+        # "Firmware not found" 卡彩虹屏;dtoverlay=vc4-kms-v3d 依赖 overlays/ 目录,
+        # 缺了固件处理 config.txt 时卡住;全量 dtb 供固件按 board 自动选择。
         for f in "$FW_DIR/boot/"*; do
-            [ -f "$f" ] || continue
             base="$(basename "$f")"
-            # 排除 *.dtb / *.dtbo / overlays / LICENCE / COPYING(避免 boot 分区塞爆)
             case "$base" in
-                *.dtb|*.dtbo) continue ;;
                 LICENCE*|COPYING*) continue ;;
-                overlays) continue ;;
             esac
-            cp "$f" "$STAGING/boot/"
+            cp -r "$f" "$STAGING/boot/"
         done
 
-        # Image → kernel8.img(RPi 固件只认这个文件名)
-        mv "$STAGING/boot/Image" "$STAGING/boot/kernel8.img"
+        # 用官方 RPi OS 预编译 kernel8.img(替代我们裁剪的内核),
+        # 官方内核已修复 vc4 4B 长期运行 HDMI 崩溃问题,达到官方 RPi OS 一样的
+        # 稳定 HDMI CLI 登录体验。rootfs 仍是我们的太昊系统。
+        # 官方 kernel8.img 路径:$TAIHAO_OUT/raspios-kernel8.img(从官方 img 提取)
+        OFFICIAL_KERNEL="${TAIHAO_OUT:-/home/weizuxiao.guest/taihao-out}/raspios-kernel8.img"
+        if [ -f "$OFFICIAL_KERNEL" ]; then
+            cp "$OFFICIAL_KERNEL" "$STAGING/boot/kernel8.img"
+            rm -f "$STAGING/boot/Image"
+            echo "post-image: 用官方 RPi kernel8.img($(ls -la "$OFFICIAL_KERNEL" | awk '{print $5}') 字节)"
+        else
+            # Fallback: 用我们裁剪的内核(可能 vc4 4B 黑屏)
+            mv "$STAGING/boot/Image" "$STAGING/boot/kernel8.img"
+            echo "post-image: WARNING 官方内核未找到,用使用官方 kernel8.img;fallback 到太昊裁剪内核(可能 vc4 4B 黑屏)"
+        fi
 
-        # DTB(按平台选一个,RPi 固件优先看 device_tree= 指定的)
-        case "$PLATFORM" in
-            rpi4b)  cp "$FW_DIR/boot/bcm2711-rpi-4-b.dtb"      "$STAGING/boot/" ;;
-            rpi3bp) cp "$FW_DIR/boot/bcm2710-rpi-3-b-plus.dtb"  "$STAGING/boot/" ;;
-        esac
-
-        # config.txt(arm_64bit=1 + 内核 + DTB 引用)
+        # config.txt:vc4-kms-v3d(v13 fkms 让 systemd 崩了;v12 kms-v3d 系统完整到 Multi-User)
         cat > "$STAGING/boot/config.txt" <<EOF
 # 太昊 OS · $PLATFORM 启动配置
+dtparam=audio=on
+camera_auto_detect=1
+display_auto_detect=1
+auto_initramfs=1
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+disable_fw_kms_setup=1
 arm_64bit=1
-kernel=kernel8.img
-$(case "$PLATFORM" in
-    rpi4b)  echo "device_tree=bcm2711-rpi-4-b.dtb" ;;
-    rpi3bp) echo "device_tree=bcm2710-rpi-3-b-plus.dtb" ;;
-esac)
-# initramfs(initrd)由固件加载,作为内核 initrd=
-initramfs initramfs.cpio 0x01f00000
+disable_overscan=1
+arm_boost=1
 EOF
-        cp "$SRC_BOOT/initramfs.cpio" "$STAGING/boot/"
+
+        # cmdline.txt:console=tty1 + ttyAMA0 + video=1280x720(回到 v12 验证过的稳定组合)
+        cat > "$STAGING/boot/cmdline.txt" <<EOF
+console=tty1 console=ttyAMA0,115200 root=/dev/mmcblk0p2 rootfstype=ext4 fsck.repair=yes rootwait quiet loglevel=3
+EOF
+
+        # 版本标记:烧录后插回电脑可确认卡上内容(多卡切换时防混淆)
+        echo "taihao $PLATFORM build $(date +%Y%m%d-%H%M%S) kernel=$(basename $(readlink -f "$SRC_BOOT/kernel-build/arch/arm64/boot/Image" 2>/dev/null) 2>/dev/null || echo 6.6)" > "$STAGING/boot/taihao.version"
+
+        # boot.vfat:用 mkfs.vfat 显式生成,与官方 RPi OS 完全一致:
+        #   -F 32 FAT32; -s 1 每簇 1 扇区(512B 簇); -h 16384 隐藏扇区 = 8MiB 分区偏移。
+        # genimage 自动生成的 vfat 隐藏扇区值不对(BPB 0x18 与实际偏移不符),
+        # 固件按 BPB 计算读取位置会错位 → "Invalid ELF header: start4.elf" → 卡彩虹屏。
+        BOOT_VFAT="$BINARIES_DIR/boot.vfat"
+        rm -f "$BOOT_VFAT"
+        mkfs.vfat -F 32 -s 1 -h 16384 -C "$BOOT_VFAT" 524288
+        MTOOLS_SKIP_CHECK=1 mcopy -sp -i "$BOOT_VFAT" "$STAGING/boot/"* ::/
+        echo "post-image: boot.vfat 生成完成 ($(ls -la "$BOOT_VFAT" | awk '{print $5}') 字节)"
         ;;
 esac
 
@@ -113,15 +135,18 @@ esac
 rm -rf "$GENIMAGE_TMP"
 echo "post-image: 生成 SD 卡镜像 (platform=$PLATFORM)"
 
+# rootpath=STAGING(boot 文件);inputpath=$BINARIES_DIR(找 rootfs.ext2 直接嵌入,
+# 避免 genimage 重新打包 rootfs——它没有 buildroot 的 fakeroot 产物,会生成空 rootfs,
+# 且会覆盖 buildroot 的 rootfs.ext4 符号链接、污染 rootfs.ext2 本体)
 genimage \
     --rootpath  "$STAGING" \
     --tmppath   "$GENIMAGE_TMP" \
-    --inputpath "$STAGING/boot" \
+    --inputpath "$BINARIES_DIR" \
     --outputpath "$BINARIES_DIR" \
     --config    "$GENIMAGE_CFG"
 
 # 收尾:重命名 sdcard.img → taihao-{platform}.img,清掉中间产物
 mv "$BINARIES_DIR/sdcard.img" "$BINARIES_DIR/$OUT_IMG"
-rm -f "$BINARIES_DIR/boot.vfat" "$BINARIES_DIR/rootfs.ext4"
+rm -f "$BINARIES_DIR/boot.vfat"
 
 echo "post-image: $(ls -lh "$BINARIES_DIR/$OUT_IMG" | awk '{print $5}') $BINARIES_DIR/$OUT_IMG (PLATFORM=$PLATFORM)"
