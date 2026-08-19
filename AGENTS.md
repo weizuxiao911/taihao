@@ -15,6 +15,15 @@
 - 不擅自做超出已确认范围的动作（特别是仓库迁移、删除、强制更新、远端写入、commit / push / tag / 发布）
 - 用户口头/文字上下文只作认知输入，不写入文档
 
+## AI 执行姿态
+
+- **用户最终决策者**:AI 充分尊重用户明示意图,不擅自抵触
+- **不预设障碍**:即使存在疑虑,先按用户最直接指令执行,边执行边沟通,不预设边界问题
+- **明示 ≠ 越界**:`AGENTS.md` 铁律「未经用户明示」约束的是「未授权」场景;用户已明示的输入(项目外文件 / 命令 / 参考 / 工具),按明示执行,不再二次卡边界
+- **简洁**:执行意图 + 必要路径,不展开理由;同一解释不重复
+- **不绕**:同一问题被反复问 ≥ 2 次,坚持原答案或升级为「请明示二选一」,不再反复推脱
+- **情绪 ≠ 理由**:AI 不因用户语气(包括脏话 / 催促)修改决策;但 AI 也不被情绪带跑,该顶的合理边界(铁律 / 安全)继续顶,只是简洁直接地顶
+
 ## 文档职责分层
 
 - `README.md`：人看，太昊 OS 的项目门面
@@ -300,3 +309,6 @@ taihao/
 | 2026-08-08 | 基座 OS 落地批次验收通过（按任务文档 §四 五硬性项）：Buildroot 镜像 rootfs.ext2（1GB ext4）QEMU 启动 → 5 服务 Started + Multi-User System；5 binary/unit/wants/SKILL/taihao 用户/default.target 全量核验；partition-layout / ota-build / ota-apply 三脚本实测可执行（4 分区 GPT + ota.json sha256 + 写槽→校验→切换→回滚契约）；kernel-buildroot-验收报告定稿；SOP 当前阶段更新为「基座 OS 落地批次验收通过」 | docs/kernel-buildroot-验收报告.md、packaging/buildroot、scripts/partition、AGENTS.md |
 | 2026-08-14 | 黑盒验收口径收尾：post-build.sh 收尾三件事 ① 清掉 mkusers 上轮加的同名 dbus/systemd-* 用户,留给 fakeroot mkusers 重新加(避免 mkusers 跨次 build 冲突)② dbus.service.d/10-root.conf drop-in 强制 dbus 跑 root + machine-id 兜底生成 ③ systemd-remount-fs.service mask 掉(initramfs 无 /dev/root 必然 FAILED);登录门面改 TAIHAO:/etc/issue + /etc/hostname + /etc/os-release PRETTY_NAME + 自定义 taihao-login 替换 agetty(serial-getty drop-in)→ 黑盒 boot 零 [FAILED] + `Welcome to TAIHAO` + `username:` 提示;新增 scripts/run/ 三个 QEMU 启动脚本(qemu冒烟启动.sh / qemu运行镜像.sh / qemu调试镜像.sh)统一封装 Image+initramfs.cpio+snap 路径;AGENTS.md 新增「构建产物 · 平台覆盖」章节登记多平台 img(QEMU + RPi 3B+/4B + RK3588)需求 | packaging/buildroot/scripts/post-build.sh、scripts/run/、AGENTS.md |
 | 2026-08-14 | 多平台 img M1 + M2 + M3 交付:QEMU SD 卡 img(`taihao-qemu.img`,FAT32 boot + ext4 root,genimage 拼);RPi 4B img(`taihao-rpi4b.img`,VideoCore 固件 + kernel8.img + bcm2711-rpi-4-b.dtb + config.txt arm_64bit=1);RPi 3B+ img(`taihao-rpi3bp.img`,同上 DTB 换 bcm2710-rpi-3-b-plus.dtb);共享 arm64 内核 + buildroot rootfs,bootloader 平台各自拼;post-image.sh 改写为支持多平台(PLATFORM=qemu\|rpi4b\|rpi3bp via BR2_ROOTFS_POST_IMAGE_SCRIPT_ARGS);新增 fetch-rpi-firmware.sh 运行时从 github tarball 拉 VideoCore 固件(缓存到 ~/taihao-out/rpi-firmware/);新增 scripts/run/img烧到SD卡.sh(macOS dd 烧录 + 二次确认);AGENTS.md 更新 M1-M3 状态 ✅ | packaging/buildroot/scripts/{post-image.sh,fetch-rpi-firmware.sh,genimage-{qemu,rpi4b,rpi3bp}.cfg}、scripts/run/img烧到SD卡.sh、AGENTS.md |
+| 2026-08-19 | 新增 `待补清单.md`(v0.0.1,项目根):在 Linux Core + 4 内置服务 + 4 接入规范之外,登记 17 项仍待补的规范与组件(必填 7 / 应有 6 / 可后置 4),按"是什么 / 为何需要 / 当前缺什么"三句话定义,不含实现细节;1.4 总览 Mermaid 标注已完成 → 必填 → 应有 → 可后置推进路径 | 待补清单.md、AGENTS.md |
+| 2026-08-19 | `内置服务设计.md` 大版本重构(v0.0.12 → v0.1.0,用户授权):按用户重规划的 5 步推进路径,内置服务从 4 精简为 3(联网 / 消息 / 智能体),组网 / 设备管理推到后期;消息服务吸收外部收发 + 内部分发(原任务中继 + comm-center 内总线合一);智能体服务吸收高层意图下发(原 rt-loop 折叠进 HAL 闭环);接入规范明确为 4 套(HAL / Provider / agent.md / skill.md);新增 §5 接入规范与 §6 设备管理与 Mesh 组网(后期)两章;待补清单.md 同步刷 4 → 3 内置服务表述 | 内置服务设计.md、待补清单.md、AGENTS.md |
+| 2026-08-19 | 新增 "AI 执行姿态" 章节(协作分工后):用户最终决策者 / 不预设障碍 / 明示≠越界 / 简洁不绕 / 情绪≠理由 | AGENTS.md |
